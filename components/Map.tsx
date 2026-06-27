@@ -15,9 +15,10 @@ interface MapProps {
   points: MapPoint[];
   isOnline: boolean;
   focusPoint?: { lat: number; lng: number } | null;
+  route?: Array<{ lat: number; lng: number }>;
 }
 
-export default function Map({ points, isOnline, focusPoint }: MapProps) {
+export default function Map({ points, isOnline, focusPoint, route }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapInstanceRef = useRef<any>(null);
@@ -44,7 +45,7 @@ export default function Map({ points, isOnline, focusPoint }: MapProps) {
       }).addTo(map);
 
       mapInstanceRef.current = { map, L };
-      renderPoints(L, map, points);
+      renderPoints(L, map, points, route);
 
       // Fix broken tile layout after the flex/grid container settles
       setTimeout(() => map.invalidateSize(), 200);
@@ -61,19 +62,40 @@ export default function Map({ points, isOnline, focusPoint }: MapProps) {
   }, []);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function renderPoints(L: any, map: any, pts: MapPoint[]) {
+  function renderPoints(L: any, map: any, pts: MapPoint[], routePts?: Array<{ lat: number; lng: number }>) {
+    // Draw route line first (below markers)
+    const linePts = routePts && routePts.length > 1 ? routePts : pts.length > 1 ? pts : null;
+    if (linePts) {
+      const latLngs = linePts.map((p) => [p.lat, p.lng] as [number, number]);
+      // Shadow line
+      L.polyline(latLngs, { color: "#000", weight: 7, opacity: 0.12, lineJoin: "round" }).addTo(map);
+      // Main route line
+      L.polyline(latLngs, { color: "#2d5a1b", weight: 4, opacity: 0.85, lineJoin: "round" }).addTo(map);
+      // Animated dash overlay
+      L.polyline(latLngs, {
+        color: "#7bc64a",
+        weight: 3,
+        dashArray: "14, 10",
+        opacity: 0.9,
+        lineJoin: "round",
+      }).addTo(map);
+    }
+
     pts.forEach((pt) => {
-      const color = pt.isHub ? "#10b981" : pt.isUser ? "#f59e0b" : "#e86a2a";
-      const size = pt.isHub ? 20 : pt.isUser ? 18 : 14;
+      const color = pt.isHub ? "#2d5a1b" : pt.isUser ? "#c8781a" : "#e86a2a";
+      const size = pt.isHub ? 22 : pt.isUser ? 20 : 14;
+      const label = pt.isHub ? "🏭" : pt.isUser ? "★" : "";
 
       const icon = L.divIcon({
         html: `<div style="
           background:${color};
           width:${size}px;height:${size}px;
           border-radius:50%;
-          border:2.5px solid rgba(255,255,255,0.95);
-          box-shadow:0 0 10px ${color}88, 0 2px 6px rgba(0,0,0,0.35)
-        "></div>`,
+          border:3px solid rgba(255,255,255,0.95);
+          box-shadow:0 0 0 2px ${color}55, 0 3px 8px rgba(0,0,0,0.4);
+          display:flex;align-items:center;justify-content:center;
+          font-size:${size * 0.55}px;line-height:1;
+        ">${label}</div>`,
         className: "",
         iconAnchor: [size / 2, size / 2],
       });
@@ -83,21 +105,11 @@ export default function Map({ points, isOnline, focusPoint }: MapProps) {
         .bindPopup(
           `<div style="font-family:system-ui;font-size:13px;color:#111;padding:2px 0">
             <b>${pt.name}</b>
-            ${pt.isHub ? "<br/><span style='color:#059669;font-size:11px'>🏭 Wirtualny Hub</span>" : ""}
-            ${pt.isUser ? "<br/><span style='color:#d97706;font-size:11px'>📍 Twoja lokalizacja</span>" : ""}
+            ${pt.isHub ? "<br/><span style='color:#059669;font-size:11px'>🏭 Punkt skupu</span>" : ""}
+            ${pt.isUser ? "<br/><span style='color:#c8781a;font-size:11px'>★ Twoje pole</span>" : ""}
           </div>`
         );
     });
-
-    if (pts.length > 1) {
-      const latLngs = pts.map((p) => [p.lat, p.lng] as [number, number]);
-      L.polyline(latLngs, {
-        color: "#10b981",
-        weight: 3,
-        dashArray: "10, 7",
-        opacity: 0.75,
-      }).addTo(map);
-    }
   }
 
   // Re-render markers when points list changes
@@ -110,9 +122,9 @@ export default function Map({ points, isOnline, focusPoint }: MapProps) {
         map.removeLayer(layer);
       }
     });
-    renderPoints(L, map, points);
+    renderPoints(L, map, points, route);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [points]);
+  }, [points, route]);
 
   // Fly to new farmer location after registration
   useEffect(() => {

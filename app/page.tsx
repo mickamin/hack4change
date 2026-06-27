@@ -164,6 +164,23 @@ export default function App() {
   ];
 
   const metrics = routeData?.metrics;
+
+  // Insert userFarmer into milkRunRoute at cheapest position
+  const milkRun = routeData?.milkRunRoute ?? [];
+  const orderedRoute: Array<{ lat: number; lng: number }> = (() => {
+    if (!userFarmer || milkRun.length === 0) return milkRun;
+    const u = { lat: userFarmer.lat, lng: userFarmer.lng, name: userFarmer.name };
+    const dist = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) =>
+      Math.hypot(a.lat - b.lat, a.lng - b.lng);
+    let bestCost = Infinity, bestIdx = 0;
+    for (let i = 0; i < milkRun.length - 1; i++) {
+      const cost = dist(milkRun[i], u) + dist(u, milkRun[i + 1]) - dist(milkRun[i], milkRun[i + 1]);
+      if (cost < bestCost) { bestCost = cost; bestIdx = i + 1; }
+    }
+    const result = [...milkRun];
+    result.splice(bestIdx, 0, u);
+    return result;
+  })();
   const userTotalPallets = cropEntries.length > 0
     ? cropEntries.reduce((s, e) => s + e.pallets, 0)
     : (userFarmer?.pallets ?? 0);
@@ -449,7 +466,7 @@ export default function App() {
       <div style={{ height: "100vh", display: "flex", overflow: "hidden" }}>
         {/* Map */}
         <div style={{ flex: 1, position: "relative" }}>
-          <Map points={mapPoints} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} />
+          <Map points={mapPoints} route={orderedRoute} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} />
           {/* Top-left logo */}
           <div style={{ position: "absolute", top: "1rem", left: "1rem", zIndex: 500, background: "rgba(255,253,247,0.92)", border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.4rem 0.875rem", display: "flex", alignItems: "center", gap: "0.4rem", backdropFilter: "blur(6px)" }}>
             <span>🌾</span>
@@ -469,7 +486,7 @@ export default function App() {
   return (
     <div style={{ height: "100dvh", position: "relative", overflow: "hidden" }}>
       <div style={{ position: "absolute", inset: 0 }}>
-        <Map points={mapPoints} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} />
+        <Map points={mapPoints} route={orderedRoute} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} />
       </div>
 
       {/* Top bar */}
