@@ -234,7 +234,7 @@ export default function App() {
         <div style={{ position: "relative", zIndex: 2, maxWidth: "440px", width: "100%", padding: "1.5rem", textAlign: "center", marginTop: "auto" }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", background: T.card, border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.3rem 0.9rem", marginBottom: "1.5rem" }}>
             <img src="/agropool-logo.svg" alt="" width={20} height={20} />
-            <span style={{ fontFamily: "var(--font-league-spartan), sans-serif", fontWeight: 700, fontSize: "0.95rem", textTransform: "uppercase", letterSpacing: "0.01em" }}>
+            <span style={{ fontFamily: "var(--font-league-spartan), sans-serif", fontWeight: 700, fontSize: "0.95rem", letterSpacing: "0.01em" }}>
               <span style={{ color: "#396a1b" }}>Agro</span><span style={{ color: "#f29509" }}>Pool</span>
             </span>
           </div>
@@ -791,7 +791,7 @@ export default function App() {
         {/* Top-left logo */}
         <div style={{ position: "absolute", top: "1rem", left: "1rem", zIndex: 500, background: "rgba(255,253,247,0.92)", border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.4rem 0.875rem", display: "flex", alignItems: "center", gap: "0.45rem", backdropFilter: "blur(6px)" }}>
           <img src="/agropool-logo.svg" alt="" width={22} height={22} />
-          <span style={{ fontFamily: "var(--font-league-spartan), sans-serif", fontWeight: 700, fontSize: "1rem", textTransform: "uppercase", letterSpacing: "0.01em" }}>
+          <span style={{ fontFamily: "var(--font-league-spartan), sans-serif", fontWeight: 700, fontSize: "1rem", letterSpacing: "0.01em" }}>
             <span style={{ color: "#396a1b" }}>Agro</span><span style={{ color: "#f29509" }}>Pool</span>
           </span>
         </div>
@@ -815,7 +815,7 @@ export default function App() {
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 500, padding: "0.875rem 1rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "linear-gradient(to bottom, rgba(26,46,10,0.8) 0%, transparent 100%)" }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}>
           <img src="/agropool-logo.svg" alt="" width={22} height={22} />
-          <span style={{ fontFamily: "var(--font-league-spartan), sans-serif", fontWeight: 700, fontSize: "1.05rem", textTransform: "uppercase", letterSpacing: "0.01em" }}>
+          <span style={{ fontFamily: "var(--font-league-spartan), sans-serif", fontWeight: 700, fontSize: "1.05rem", letterSpacing: "0.01em" }}>
             <span style={{ color: "#e8f0d8" }}>Agro</span><span style={{ color: "#f29509" }}>Pool</span>
           </span>
         </span>

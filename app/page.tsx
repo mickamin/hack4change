@@ -18,7 +18,7 @@ export default function HomePage() {
     <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", padding: "1.5rem", color: T.text }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "1.5rem", marginBottom: "2rem" }}>
         <img src="/agropool-logo.svg" alt="AgroPool" width={80} height={80} style={{ marginBottom: "0.6rem" }} />
-        <span style={{ fontFamily: "var(--font-league-spartan), sans-serif", fontWeight: 700, fontSize: "2.1rem", letterSpacing: "0.01em", textTransform: "uppercase", lineHeight: 1 }}>
+        <span style={{ fontFamily: "var(--font-league-spartan), sans-serif", fontWeight: 700, fontSize: "2.1rem", letterSpacing: "0.01em", lineHeight: 1 }}>
           <span style={{ color: "#396a1b" }}>Agro</span><span style={{ color: "#f29509" }}>Pool</span>
         </span>
       </div>
