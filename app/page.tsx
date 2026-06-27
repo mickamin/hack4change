@@ -64,6 +64,7 @@ export default function App() {
   const [showPanel, setShowPanel]       = useState(false);
   const [countedFarmers, setCountedFarmers] = useState(0);
   const [animStep, setAnimStep]         = useState(0);
+  const [selectedPool, setSelectedPool] = useState<0|1|2>(0);
 
   useEffect(() => {
     setHydrated(true);
@@ -397,88 +398,67 @@ export default function App() {
 
   // ── ACT 3 ─────────────────────────────────────────────────────────────────
   const creator = allFarmers.find(f => f.isPoolCreator) ?? allFarmers[0] ?? null;
-  const panelContent = (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflowY: "auto" }}>
-      {/* Pool header */}
-      <div style={{ padding: "1.25rem 1.25rem 0.875rem", borderBottom: `1px solid ${T.border}` }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-          <div>
-            <div style={{ fontWeight: 900, fontSize: "1rem", color: T.text }}>
-              Pula · {userFarmer?.village ?? creator?.village ?? "Kartuzy"}
-            </div>
-            <div style={{ fontSize: "0.72rem", color: T.subtle, marginTop: "0.1rem" }}>
-              Zamknięcie: {nextThursday()}, 23:59
-            </div>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", marginTop: "0.35rem", padding: "0.2rem 0.6rem", borderRadius: "999px", fontSize: "0.65rem", fontWeight: 700, background: "#f0faeb", border: "1px solid #b0d88a", color: T.accent }}>
-              <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: T.accent, display: "inline-block" }} />
-              Otwarta · Zbieranie zgłoszeń
-            </div>
-          </div>
-          <OnlineBadge isOnline={isOnline} />
-        </div>
 
-        {/* Creator contact */}
-        {creator && (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0.75rem", background: T.surface, borderRadius: "0.75rem", border: `1px solid ${T.border}`, marginBottom: "0.875rem" }}>
-            <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: T.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <span style={{ fontSize: "0.7rem", fontWeight: 900, color: "#fff" }}>{creator.name.charAt(0)}</span>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: "0.75rem", fontWeight: 700, color: T.text }}>{creator.name}</div>
-              <div style={{ fontSize: "0.68rem", color: T.subtle }}>Założył pulę</div>
-            </div>
-            <a href={`tel:${creator.phone.replace(/\s/g, "")}`}
-              style={{ display: "flex", alignItems: "center", gap: "0.3rem", padding: "0.375rem 0.75rem", background: T.accent, color: "#fff", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, textDecoration: "none", flexShrink: 0 }}>
-              Zadzwoń
-            </a>
-          </div>
-        )}
+  // Mock data for pool 2 and truck
+  const pool2Farmers = [
+    { id: "p2f1", name: "Ryszard Kaszubski", crop: "Ziemniaki", pallets: 4, isCreator: true },
+    { id: "p2f2", name: "Bożena Struk",      crop: "Marchew",   pallets: 3, isCreator: false },
+    { id: "p2f3", name: "Henryk Formela",    crop: "Kapusta biała", pallets: 2, isCreator: false },
+  ];
+  const pool2Pallets = pool2Farmers.reduce((s, f) => s + f.pallets, 0) + userTotalPallets;
+  const pool2Pct = Math.min(100, Math.round((pool2Pallets / TRUCK_CAPACITY) * 100));
 
-        {/* Truck capacity bar */}
-        <div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: T.muted, marginBottom: "0.3rem" }}>
-            <span>{poolPallets} / {TRUCK_CAPACITY} palet</span>
-            <span style={{ color: poolPct >= 100 ? T.accent : T.subtle, fontWeight: 700 }}>
-              {poolPct >= 100 ? "Ciężarówka gotowa!" : `jeszcze ${TRUCK_CAPACITY - poolPallets} palet`}
-            </span>
+  function nextMonday(): string {
+    const d = new Date();
+    const daysUntil = (1 - d.getDay() + 7) % 7 || 7;
+    d.setDate(d.getDate() + daysUntil);
+    return d.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "short" });
+  }
+  function nextWednesday(): string {
+    const d = new Date();
+    const daysUntil = (3 - d.getDay() + 7) % 7 || 7;
+    d.setDate(d.getDate() + daysUntil);
+    return d.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "short" });
+  }
+
+  const POOL_TABS: { icon: string; label: string; sub: string; pallets: number; max: number; color: string }[] = [
+    { icon: "🌾", label: "Pula #1",      sub: nextThursday(),  pallets: poolPallets,  max: TRUCK_CAPACITY, color: T.accent },
+    { icon: "🌾", label: "Pula #2",      sub: nextMonday(),    pallets: pool2Pallets, max: TRUCK_CAPACITY, color: T.accent },
+    { icon: "🚛", label: "Ciężarówka",   sub: nextWednesday(), pallets: 6,            max: 18,             color: T.gold },
+    { icon: "➕", label: "Własna pula",  sub: "dowolna data",  pallets: 0,            max: TRUCK_CAPACITY, color: T.muted },
+  ];
+
+  const PoolDetail0 = (
+    <>
+      {/* Creator contact */}
+      {creator && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0.75rem", background: T.surface, borderRadius: "0.75rem", border: `1px solid ${T.border}`, marginBottom: "0.875rem" }}>
+          <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: T.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <span style={{ fontSize: "0.7rem", fontWeight: 900, color: "#fff" }}>{creator.name.charAt(0)}</span>
           </div>
-          <div style={{ height: "8px", background: T.surface, borderRadius: "999px", overflow: "hidden", border: `1px solid ${T.border}` }}>
-            <div style={{ height: "100%", width: `${poolPct}%`, background: poolPct >= 100 ? T.accent : T.accentHi, borderRadius: "999px", transition: "width 0.6s ease" }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: T.text }}>{creator.name}</div>
+            <div style={{ fontSize: "0.68rem", color: T.subtle }}>Założył pulę</div>
           </div>
+          <a href={`tel:${creator.phone.replace(/\s/g, "")}`}
+            style={{ display: "flex", alignItems: "center", gap: "0.3rem", padding: "0.375rem 0.75rem", background: T.accent, color: "#fff", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, textDecoration: "none", flexShrink: 0 }}>
+            Zadzwoń
+          </a>
         </div>
+      )}
+      <CapacityBar current={poolPallets} max={TRUCK_CAPACITY} />
+      <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0.75rem 0 0.5rem" }}>
+        W puli ({visibleFarmers.length + (userFarmer ? 1 : 0)} rolników)
       </div>
-
-      {/* Farmer list */}
-      <div style={{ padding: "0.75rem 1.25rem", borderBottom: `1px solid ${T.border}`, flex: 1 }}>
-        <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.625rem" }}>
-          W puli ({visibleFarmers.length + (userFarmer ? 1 : 0)} rolników)
-        </div>
-
-        {userFarmer && cropEntries.length > 0
-          ? cropEntries.map(e => (
-              <FarmerRow key={e.crop} name={userFarmer.name} crop={e.crop} pallets={e.pallets} isUser />
-            ))
-          : userFarmer && (
-              <FarmerRow name={userFarmer.name} crop={userFarmer.crop} pallets={userFarmer.pallets} isUser />
-            )
-        }
-        {visibleFarmers.map(f => (
-          <FarmerRow key={f.id} name={f.name} crop={f.crop} pallets={f.pallets} isCreator={!!f.isPoolCreator} />
-        ))}
-      </div>
-
-      {/* Metrics */}
+      {userFarmer && cropEntries.length > 0
+        ? cropEntries.map(e => <FarmerRow key={e.crop} name={userFarmer.name} crop={e.crop} pallets={e.pallets} isUser />)
+        : userFarmer && <FarmerRow name={userFarmer.name} crop={userFarmer.crop} pallets={userFarmer.pallets} isUser />
+      }
+      {visibleFarmers.map(f => <FarmerRow key={f.id} name={f.name} crop={f.crop} pallets={f.pallets} isCreator={!!f.isPoolCreator} />)}
       {animStep >= 2 && metrics && (
-        <div style={{ padding: "0.875rem 1.25rem", borderBottom: `1px solid ${T.border}` }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.625rem" }}>
-            <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              Wspólna dostawa vs. samodzielnie
-            </div>
-            <span style={{ fontSize: "0.58rem", fontWeight: 700, color: metrics.priceSource === "ec-agridata" ? T.accent : T.subtle, background: metrics.priceSource === "ec-agridata" ? "#e8f5e0" : T.surface, border: `1px solid ${metrics.priceSource === "ec-agridata" ? T.accent + "44" : T.border}`, borderRadius: "4px", padding: "1px 5px" }}>
-              {metrics.priceSource === "ec-agridata" ? "EC live" : "szacunek"}
-            </span>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "0.625rem" }}>
+        <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: `1px solid ${T.border}` }}>
+          <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Wspólna dostawa vs. samodzielnie</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "0.5rem" }}>
             <StatBox label="Oszczędność" value={`${metrics.costSavedPln.toFixed(0)} zł`} sub={`trasa ${metrics.milkRunDistanceKm} km`} accent />
             <StatBox label="CO₂ mniej" value={`${metrics.co2SavedKg} kg`} sub={`${allFarmers.length} vanów → 1 TIR`} />
           </div>
@@ -487,9 +467,111 @@ export default function App() {
           </div>
         </div>
       )}
+    </>
+  );
+
+  const PoolDetail1 = (
+    <>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0.75rem", background: T.surface, borderRadius: "0.75rem", border: `1px solid ${T.border}`, marginBottom: "0.875rem" }}>
+        <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: T.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <span style={{ fontSize: "0.7rem", fontWeight: 900, color: "#fff" }}>R</span>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: "0.75rem", fontWeight: 700, color: T.text }}>Ryszard Kaszubski</div>
+          <div style={{ fontSize: "0.68rem", color: T.subtle }}>Założył pulę</div>
+        </div>
+        <a href="tel:+48506111222" style={{ padding: "0.375rem 0.75rem", background: T.accent, color: "#fff", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, textDecoration: "none" }}>Zadzwoń</a>
+      </div>
+      <CapacityBar current={pool2Pallets} max={TRUCK_CAPACITY} />
+      <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0.75rem 0 0.5rem" }}>
+        W puli ({pool2Farmers.length + (userFarmer ? 1 : 0)} rolników)
+      </div>
+      {userFarmer && cropEntries.length > 0
+        ? cropEntries.map(e => <FarmerRow key={e.crop} name={userFarmer.name} crop={e.crop} pallets={e.pallets} isUser />)
+        : userFarmer && <FarmerRow name={userFarmer.name} crop={userFarmer.crop} pallets={userFarmer.pallets} isUser />
+      }
+      {pool2Farmers.map(f => <FarmerRow key={f.id} name={f.name} crop={f.crop} pallets={f.pallets} isCreator={f.isCreator} />)}
+      <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: `1px solid ${T.border}`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+        <StatBox label="Oszczędność" value="~210 zł" sub="trasa ~72 km" accent />
+        <StatBox label="CO₂ mniej" value="~21 kg" sub={`${pool2Farmers.length} vanów → 1 TIR`} />
+      </div>
+    </>
+  );
+
+  const PoolDetail2 = (
+    <>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.875rem", background: "#fdf8f0", borderRadius: "0.875rem", border: `1px solid ${T.gold}44`, marginBottom: "0.875rem" }}>
+        <span style={{ fontSize: "2rem" }}>🚛</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 800, fontSize: "0.9rem", color: T.text }}>Trans-Kaszuby Sp. z o.o.</div>
+          <div style={{ fontSize: "0.72rem", color: T.muted }}>Kierowca: Tomasz Nowak · +48 512 333 444</div>
+        </div>
+        <a href="tel:+48512333444" style={{ padding: "0.375rem 0.75rem", background: T.gold, color: "#fff", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, textDecoration: "none" }}>Zadzwoń</a>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "0.875rem" }}>
+        <StatBox label="Trasa" value="Kartuzy → Gdańsk" />
+        <StatBox label="Wolne palety" value="18 / 24" />
+        <StatBox label="Odjazd" value={nextWednesday()} />
+        <StatBox label="Typ" value="Backhaul TIR" />
+      </div>
+      <div style={{ padding: "0.75rem", background: "#f0faeb", border: "1px solid #b0d88a", borderRadius: "0.875rem", fontSize: "0.8rem", color: T.accent, fontWeight: 700 }}>
+        🔄 Pusty przebieg → TIR wraca z Gdańska i zabierze Twój towar po drodze.
+      </div>
+      <CapacityBar current={6} max={18} color={T.gold} />
+    </>
+  );
+
+  const panelContent = (
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflowY: "auto" }}>
+      {/* Pool header */}
+      <div style={{ padding: "1rem 1.25rem 0.75rem", borderBottom: `1px solid ${T.border}` }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.625rem" }}>
+          <div>
+            <div style={{ fontWeight: 900, fontSize: "1rem", color: T.text }}>
+              {selectedPool === 2 ? "Ciężarówka · Backhaul" : `Pula · ${userFarmer?.village ?? creator?.village ?? "Kartuzy"}`}
+            </div>
+            <div style={{ fontSize: "0.72rem", color: T.subtle }}>
+              Zamknięcie: {selectedPool === 0 ? nextThursday() : selectedPool === 1 ? nextMonday() : nextWednesday()}, 23:59
+            </div>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", marginTop: "0.3rem", padding: "0.2rem 0.6rem", borderRadius: "999px", fontSize: "0.65rem", fontWeight: 700, background: "#f0faeb", border: "1px solid #b0d88a", color: T.accent }}>
+              <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: T.accent, display: "inline-block" }} />
+              Otwarta · Zbieranie zgłoszeń
+            </div>
+          </div>
+          <OnlineBadge isOnline={isOnline} />
+        </div>
+
+        {/* Pool tabs */}
+        <div style={{ display: "flex", gap: "0.4rem", overflowX: "auto", paddingBottom: "0.125rem" }}>
+          {POOL_TABS.map((tab, i) => {
+            const active = selectedPool === i;
+            const pct = Math.min(100, Math.round((tab.pallets / tab.max) * 100));
+            return (
+              <button key={i} type="button"
+                onClick={() => i === 3 ? (setAct(2), resetForm()) : setSelectedPool(i as 0|1|2)}
+                style={{ flexShrink: 0, minWidth: "80px", padding: "0.5rem 0.625rem", borderRadius: "0.75rem", border: `2px solid ${active ? tab.color : T.border}`, background: active ? (i === 2 ? "#fdf8f0" : "#f0faeb") : T.surface, cursor: "pointer", touchAction: "manipulation", textAlign: "left" }}>
+                <div style={{ fontSize: "0.75rem" }}>{tab.icon} <span style={{ fontWeight: 800, color: active ? tab.color : T.text }}>{tab.label}</span></div>
+                <div style={{ fontSize: "0.6rem", color: T.subtle, marginTop: "0.1rem" }}>{tab.sub}</div>
+                {i < 3 && (
+                  <div style={{ marginTop: "0.3rem", height: "3px", background: T.border, borderRadius: "999px", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${pct}%`, background: tab.color, borderRadius: "999px" }} />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Detail */}
+      <div style={{ padding: "0.875rem 1.25rem", flex: 1 }}>
+        {selectedPool === 0 && PoolDetail0}
+        {selectedPool === 1 && PoolDetail1}
+        {selectedPool === 2 && PoolDetail2}
+      </div>
 
       {/* Actions */}
-      <div style={{ padding: "0.875rem 1.25rem", display: "flex", gap: "0.625rem" }}>
+      <div style={{ padding: "0.875rem 1.25rem", borderTop: `1px solid ${T.border}`, display: "flex", gap: "0.625rem" }}>
         <button onClick={() => { setAct(2); resetForm(); }} style={{ flex: 1, padding: "0.75rem", borderRadius: "0.875rem", border: `1.5px solid ${T.border}`, background: T.surface, color: T.muted, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>
           + Dołącz
         </button>
@@ -580,6 +662,22 @@ function StatBox({ label, value, sub, accent }: { label: string; value: string; 
       <div style={{ fontSize: "0.6rem", color: T.subtle, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>
       <div style={{ fontSize: "1rem", fontWeight: 900, color: accent ? T.accent : T.accentHi, fontVariantNumeric: "tabular-nums" }}>{value}</div>
       {sub && <div style={{ fontSize: "0.6rem", color: T.subtle, marginTop: "0.1rem" }}>{sub}</div>}
+    </div>
+  );
+}
+
+function CapacityBar({ current, max, color }: { current: number; max: number; color?: string }) {
+  const pct = Math.min(100, Math.round((current / max) * 100));
+  const c = color ?? T.accentHi;
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: T.muted, marginBottom: "0.3rem" }}>
+        <span>{current} / {max} palet</span>
+        <span style={{ color: pct >= 100 ? c : T.subtle, fontWeight: 700 }}>{pct >= 100 ? "Gotowe!" : `jeszcze ${max - current}`}</span>
+      </div>
+      <div style={{ height: "8px", background: T.surface, borderRadius: "999px", overflow: "hidden", border: `1px solid ${T.border}` }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: c, borderRadius: "999px", transition: "width 0.6s ease" }} />
+      </div>
     </div>
   );
 }
