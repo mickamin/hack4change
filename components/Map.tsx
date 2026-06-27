@@ -96,10 +96,10 @@ export default function Map({ points, isOnline, focusPoint, route }: MapProps) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function renderPoints(L: any, map: any, pts: MapPoint[], routePts?: Array<{ lat: number; lng: number }>) {
-    const linePts = routePts && routePts.length > 1 ? routePts : pts.length > 1 ? pts : null;
-    if (linePts) {
-      fetchOsrmRoute(linePts).then(latLngs => drawRoute(L, map, latLngs)).catch(() => {
-        drawRoute(L, map, linePts.map(p => [p.lat, p.lng]));
+    // Only draw route when explicitly given — no fallback to pts straight lines
+    if (routePts && routePts.length > 1) {
+      fetchOsrmRoute(routePts).then(latLngs => drawRoute(L, map, latLngs)).catch(() => {
+        drawRoute(L, map, routePts.map(p => [p.lat, p.lng]));
       });
     }
 

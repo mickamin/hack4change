@@ -465,7 +465,7 @@ export default function App() {
     return (
       <div style={{ height: "100vh", position: "relative", overflow: "hidden" }}>
         {/* Map — always full width */}
-        <Map points={mapPoints} route={orderedRoute} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} />
+        <Map points={mapPoints} route={animStep >= 2 ? orderedRoute : undefined} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} />
 
         {/* Top-left logo */}
         <div style={{ position: "absolute", top: "1rem", left: "1rem", zIndex: 500, background: "rgba(255,253,247,0.92)", border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.4rem 0.875rem", display: "flex", alignItems: "center", gap: "0.4rem", backdropFilter: "blur(6px)" }}>
@@ -485,7 +485,7 @@ export default function App() {
   return (
     <div style={{ height: "100dvh", position: "relative", overflow: "hidden" }}>
       <div style={{ position: "absolute", inset: 0 }}>
-        <Map points={mapPoints} route={orderedRoute} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} />
+        <Map points={mapPoints} route={animStep >= 2 ? orderedRoute : undefined} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} />
       </div>
 
       {/* Top bar */}
