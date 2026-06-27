@@ -109,11 +109,12 @@ export default function PrzewoznikPage() {
   const [date, setDate] = useState("");
   const [capacity, setCapacity] = useState(12);
 
-  // Crop picker state (same pattern as rolnik)
+  type Unit = "palety" | "kg";
+  interface SelectedCrop { name: string; qty: number; unit: Unit }
   const [allCrops, setAllCrops] = useState<string[]>([]);
   const [cropsLoading, setCropsLoading] = useState(false);
   const [cropSearch, setCropSearch] = useState("");
-  const [selectedCrops, setSelectedCrops] = useState<string[]>([]);
+  const [selectedCrops, setSelectedCrops] = useState<SelectedCrop[]>([]);
 
   const [result, setResult] = useState<EmptyRunResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -139,10 +140,19 @@ export default function PrzewoznikPage() {
     ? allCrops.filter((c) => c.toLowerCase().includes(cropSearch.toLowerCase()))
     : allCrops;
 
-  function toggleCrop(crop: string) {
-    setSelectedCrops((prev) =>
-      prev.includes(crop) ? prev.filter((c) => c !== crop) : [...prev, crop],
-    );
+  function addCrop(crop: string) {
+    if (!selectedCrops.find((s) => s.name === crop)) {
+      setSelectedCrops((prev) => [...prev, { name: crop, qty: 5, unit: "palety" as Unit }]);
+    }
+    setCropSearch("");
+  }
+
+  function removeCrop(crop: string) {
+    setSelectedCrops((prev) => prev.filter((s) => s.name !== crop));
+  }
+
+  function updateCrop(crop: string, patch: Partial<SelectedCrop>) {
+    setSelectedCrops((prev) => prev.map((s) => s.name === crop ? { ...s, ...patch } : s));
   }
 
   async function handleSubmit() {
@@ -284,9 +294,9 @@ export default function PrzewoznikPage() {
             ) : cropSearch.trim() ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", maxHeight: "200px", overflowY: "auto" }}>
                 {filteredCrops.slice(0, 12).map((crop) => {
-                  const added = selectedCrops.includes(crop);
+                  const added = selectedCrops.some((s) => s.name === crop);
                   return (
-                    <button key={crop} type="button" onClick={() => toggleCrop(crop)}
+                    <button key={crop} type="button" onClick={() => addCrop(crop)}
                       style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.625rem 0.875rem", borderRadius: "0.75rem", border: `1.5px solid ${added ? T.accent : T.border}`, background: added ? "#f0faeb" : T.surface, cursor: "pointer", touchAction: "manipulation" }}>
                       <span style={{ fontSize: "0.9rem", fontWeight: 600, color: added ? T.accent : T.text }}>{capitalize(crop)}</span>
                       <span style={{ fontSize: "1rem", color: added ? T.accent : T.subtle }}>{added ? "v" : "+"}</span>
@@ -300,12 +310,32 @@ export default function PrzewoznikPage() {
           {selectedCrops.length > 0 && (
             <section>
               <Label>Moje ladunki</Label>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {selectedCrops.map((crop) => (
-                  <div key={crop} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 0.875rem", background: T.card, border: `1.5px solid ${T.accent}55`, borderRadius: "0.875rem" }}>
-                    <div style={{ flex: 1, fontWeight: 700, fontSize: "0.9rem", color: T.text }}>{capitalize(crop)}</div>
-                    <button type="button" onClick={() => toggleCrop(crop)}
-                      style={{ width: "28px", height: "28px", borderRadius: "50%", border: `1.5px solid ${T.border}`, background: T.surface, color: T.muted, fontSize: "0.9rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, touchAction: "manipulation" }}>x</button>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                {selectedCrops.map((sc) => (
+                  <div key={sc.name} style={{ padding: "0.875rem", background: T.card, border: `1.5px solid ${T.accent}55`, borderRadius: "0.875rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.625rem" }}>
+                      <div style={{ flex: 1, fontWeight: 700, fontSize: "0.9rem", color: T.text }}>{capitalize(sc.name)}</div>
+                      <button type="button" onClick={() => removeCrop(sc.name)}
+                        style={{ width: "28px", height: "28px", borderRadius: "50%", border: `1.5px solid ${T.border}`, background: T.surface, color: T.muted, fontSize: "0.9rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, touchAction: "manipulation" }}>x</button>
+                    </div>
+                    <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.625rem" }}>
+                      {(["palety", "kg"] as Unit[]).map((u) => (
+                        <button key={u} type="button" onClick={() => updateCrop(sc.name, { unit: u, qty: u === "palety" ? 5 : 1000 })}
+                          style={{ flex: 1, padding: "0.5rem", borderRadius: "0.625rem", border: `1.5px solid ${sc.unit === u ? T.accent : T.border}`, background: sc.unit === u ? "#f0faeb" : T.surface, color: sc.unit === u ? T.accent : T.muted, fontSize: "0.8rem", fontWeight: 700, cursor: "pointer", touchAction: "manipulation" }}>
+                          {u === "palety" ? "Palety" : "Kilogramy"}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <button type="button" onClick={() => updateCrop(sc.name, { qty: Math.max(sc.unit === "palety" ? 1 : 100, sc.qty - (sc.unit === "palety" ? 1 : 100)) })}
+                        style={{ width: "44px", height: "44px", borderRadius: "0.75rem", background: T.surface, border: `1.5px solid ${T.border}`, color: T.text, fontSize: "1.3rem", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, touchAction: "manipulation" }}>-</button>
+                      <input type="number" value={sc.qty}
+                        onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v) && v > 0) updateCrop(sc.name, { qty: v }); }}
+                        style={{ flex: 1, textAlign: "center", fontSize: "1.5rem", fontWeight: 900, color: T.accent, background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.75rem", padding: "0.5rem", outline: "none", fontVariantNumeric: "tabular-nums", boxSizing: "border-box" }} />
+                      <button type="button" onClick={() => updateCrop(sc.name, { qty: Math.min(sc.unit === "palety" ? 200 : 50000, sc.qty + (sc.unit === "palety" ? 1 : 100)) })}
+                        style={{ width: "44px", height: "44px", borderRadius: "0.75rem", background: T.surface, border: `1.5px solid ${T.border}`, color: T.text, fontSize: "1.3rem", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, touchAction: "manipulation" }}>+</button>
+                    </div>
+                    <div style={{ textAlign: "center", fontSize: "0.65rem", color: T.subtle, marginTop: "0.25rem" }}>{sc.unit === "palety" ? "palet" : "kg"}</div>
                   </div>
                 ))}
               </div>
@@ -344,8 +374,8 @@ export default function PrzewoznikPage() {
   const r = result!;
   const from = { lat: fromField.selected!.lat, lng: fromField.selected!.lng };
 
-  const selectedSet = new Set(selectedCrops);
-  const filteredMatches = r.matches.filter((m) => selectedSet.has(m.farmer.crop));
+  const selectedSet = new Set(selectedCrops.map((s) => s.name));
+  const filteredMatches = selectedSet.size > 0 ? r.matches.filter((m) => selectedSet.has(m.farmer.crop)) : r.matches;
   const filteredPallets = filteredMatches.reduce((sum, m) => sum + m.farmer.pallets, 0);
   const filteredFillPct = r.capacityPallets > 0 ? Math.min(100, Math.round((filteredPallets / r.capacityPallets) * 100)) : 0;
 

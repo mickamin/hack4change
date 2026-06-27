@@ -4,6 +4,10 @@ import { CROP_AVAILABILITY } from "@/app/api/data/mockData";
 
 const META_COLS = new Set(["id", "rok", "wojewodztwo", "powiat", "gmina", "teryt", "uzytki_rolne"]);
 
+function stripDiacritics(s: string): string {
+  return s.normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+
 export async function GET() {
   const { data, error } = await supabase.from("ARiMR").select("*");
 
@@ -25,7 +29,7 @@ export async function GET() {
   const cropSet = new Set<string>();
   for (const ca of CROP_AVAILABILITY) {
     for (const [crop, qty] of Object.entries(ca.crops)) {
-      if (qty > 0) cropSet.add(crop);
+      if (qty > 0) cropSet.add(stripDiacritics(crop));
     }
   }
   const allCrops = [...cropSet].sort();
