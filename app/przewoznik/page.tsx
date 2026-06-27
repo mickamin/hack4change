@@ -22,14 +22,6 @@ const T = {
 
 const TRUCK_CAPACITY = 24;
 
-const CARGO_TYPES = [
-  "Kapusta biała",
-  "Kapusta kiszona",
-  "Ziemniaki",
-  "Marchew",
-  "Buraki ćwikłowe",
-] as const;
-
 type Act = "form" | "result";
 
 interface NominatimResult {
@@ -116,7 +108,12 @@ export default function PrzewoznikPage() {
   const [carrierName, setCarrierName] = useState("");
   const [date, setDate] = useState("");
   const [capacity, setCapacity] = useState(12);
-  const [selectedCargo, setSelectedCargo] = useState<Set<string>>(new Set(CARGO_TYPES));
+
+  // Crop picker state (same pattern as rolnik)
+  const [allCrops, setAllCrops] = useState<string[]>([]);
+  const [cropsLoading, setCropsLoading] = useState(false);
+  const [cropSearch, setCropSearch] = useState("");
+  const [selectedCrops, setSelectedCrops] = useState<string[]>([]);
 
   const [result, setResult] = useState<EmptyRunResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -124,15 +121,35 @@ export default function PrzewoznikPage() {
   useEffect(() => {
     setHydrated(true);
     setDate(isoPlusDays(2));
+
+    setCropsLoading(true);
+    fetch("/api/crops/all")
+      .then((r) => r.json())
+      .then((json) => {
+        const list: string[] = json.availableCrops ?? [];
+        setAllCrops(list);
+        setSelectedCrops([...list]);
+      })
+      .catch(() => setAllCrops([]))
+      .finally(() => setCropsLoading(false));
   }, []);
 
-  function toggleCargo(cargo: string) {
-    setSelectedCargo((prev) => {
-      const next = new Set(prev);
-      if (next.has(cargo)) next.delete(cargo);
-      else next.add(cargo);
-      return next;
-    });
+  const filteredCrops = cropSearch.trim()
+    ? allCrops.filter((c) => c.toLowerCase().includes(cropSearch.toLowerCase()))
+    : allCrops;
+
+  function toggleCrop(crop: string) {
+    setSelectedCrops((prev) =>
+      prev.includes(crop) ? prev.filter((c) => c !== crop) : [...prev, crop],
+    );
+  }
+
+  function selectAll() {
+    setSelectedCrops([...allCrops]);
+  }
+
+  function deselectAll() {
+    setSelectedCrops([]);
   }
 
   async function handleSubmit() {
@@ -218,14 +235,9 @@ export default function PrzewoznikPage() {
               onChange={(e) => fromField.search(e.target.value)}
               onBlur={fromField.blur}
               onFocus={() => { if (fromField.suggestions.length > 0) fromField.search(fromField.query); }}
-              style={{
-                ...inputBase,
-                borderColor: fromField.selected ? T.accent : T.border,
-              }}
+              style={{ ...inputBase, borderColor: fromField.selected ? T.accent : T.border }}
             />
-            {fromField.showDropdown && (
-              <Dropdown items={fromField.suggestions} onPick={fromField.pick} />
-            )}
+            {fromField.showDropdown && <Dropdown items={fromField.suggestions} onPick={fromField.pick} />}
           </section>
 
           <section style={{ position: "relative" }}>
@@ -237,14 +249,9 @@ export default function PrzewoznikPage() {
               onChange={(e) => toField.search(e.target.value)}
               onBlur={toField.blur}
               onFocus={() => { if (toField.suggestions.length > 0) toField.search(toField.query); }}
-              style={{
-                ...inputBase,
-                borderColor: toField.selected ? T.accent : T.border,
-              }}
+              style={{ ...inputBase, borderColor: toField.selected ? T.accent : T.border }}
             />
-            {toField.showDropdown && (
-              <Dropdown items={toField.suggestions} onPick={toField.pick} />
-            )}
+            {toField.showDropdown && <Dropdown items={toField.suggestions} onPick={toField.pick} />}
           </section>
 
           <section>
@@ -264,33 +271,69 @@ export default function PrzewoznikPage() {
             </div>
           </section>
 
+          {/* Crop picker — same pattern as rolnik */}
           <section>
             <Label>Co moge zabrac</Label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-              {CARGO_TYPES.map((cargo) => {
-                const active = selectedCargo.has(cargo);
-                return (
-                  <button
-                    key={cargo}
-                    type="button"
-                    onClick={() => toggleCargo(cargo)}
-                    style={{
-                      padding: "0.55rem 1rem",
-                      borderRadius: "999px",
-                      border: `2px solid ${active ? T.accent : T.border}`,
-                      background: active ? "#f0faeb" : T.surface,
-                      cursor: "pointer",
-                      fontSize: "0.82rem",
-                      fontWeight: active ? 800 : 600,
-                      color: active ? T.accent : T.text,
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    {cargo}
+            <input
+              type="text"
+              placeholder={cropsLoading ? "Ladowanie upraw..." : "Szukaj uprawy..."}
+              value={cropSearch}
+              onChange={(e) => setCropSearch(e.target.value)}
+              disabled={cropsLoading}
+              style={{ ...inputBase, marginBottom: "0.625rem" }}
+            />
+
+            {cropsLoading ? (
+              <div style={{ textAlign: "center", padding: "1rem", color: T.subtle, fontSize: "0.85rem" }}>
+                Ladowanie...
+              </div>
+            ) : (
+              <>
+                {/* Select all / deselect all */}
+                <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.625rem" }}>
+                  <button type="button" onClick={selectAll} style={{ padding: "0.4rem 0.75rem", borderRadius: "0.5rem", border: `1.5px solid ${T.border}`, background: T.surface, color: T.muted, fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", touchAction: "manipulation" }}>
+                    Zaznacz wszystkie
                   </button>
-                );
-              })}
-            </div>
+                  <button type="button" onClick={deselectAll} style={{ padding: "0.4rem 0.75rem", borderRadius: "0.5rem", border: `1.5px solid ${T.border}`, background: T.surface, color: T.muted, fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", touchAction: "manipulation" }}>
+                    Odznacz wszystkie
+                  </button>
+                </div>
+
+                {/* Crop list */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", maxHeight: "240px", overflowY: "auto" }}>
+                  {(cropSearch.trim() ? filteredCrops : allCrops).slice(0, 20).map((crop) => {
+                    const active = selectedCrops.includes(crop);
+                    return (
+                      <button
+                        key={crop}
+                        type="button"
+                        onClick={() => toggleCrop(crop)}
+                        style={{
+                          display: "flex", alignItems: "center", justifyContent: "space-between",
+                          padding: "0.625rem 0.875rem", borderRadius: "0.75rem",
+                          border: `1.5px solid ${active ? T.accent : T.border}`,
+                          background: active ? "#f0faeb" : T.surface,
+                          cursor: "pointer", touchAction: "manipulation",
+                        }}
+                      >
+                        <span style={{ fontSize: "0.9rem", fontWeight: 600, color: active ? T.accent : T.text }}>{capitalize(crop)}</span>
+                        <span style={{ fontSize: "1rem", color: active ? T.accent : T.subtle }}>{active ? "v" : "+"}</span>
+                      </button>
+                    );
+                  })}
+                  {cropSearch.trim() && filteredCrops.length === 0 && (
+                    <p style={{ color: T.subtle, fontSize: "0.85rem", margin: 0 }}>Brak wynikow.</p>
+                  )}
+                </div>
+
+                {/* Selected count */}
+                {selectedCrops.length > 0 && (
+                  <div style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: T.muted, fontWeight: 600 }}>
+                    Wybrano: {selectedCrops.length} z {allCrops.length} upraw
+                  </div>
+                )}
+              </>
+            )}
           </section>
 
           <section>
@@ -304,16 +347,13 @@ export default function PrzewoznikPage() {
             disabled={!canSubmit}
             style={{
               background: canSubmit ? T.accent : T.subtle,
-              color: "#fff",
-              border: "none",
-              borderRadius: "1.25rem",
-              padding: "1.2rem",
-              fontSize: "1.1rem",
-              fontWeight: 900,
+              color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.2rem",
+              fontSize: "1.1rem", fontWeight: 900,
               cursor: canSubmit ? "pointer" : "not-allowed",
               width: "100%",
               boxShadow: canSubmit ? `0 6px 20px ${T.accent}44` : "none",
               opacity: loading ? 0.7 : 1,
+              touchAction: "manipulation",
             }}
           >
             {loading ? "Szukam towaru..." : "Szukaj towaru po drodze"}
@@ -328,7 +368,8 @@ export default function PrzewoznikPage() {
   const r = result!;
   const from = { lat: fromField.selected!.lat, lng: fromField.selected!.lng };
 
-  const filteredMatches = r.matches.filter((m) => selectedCargo.has(m.farmer.crop));
+  const selectedSet = new Set(selectedCrops);
+  const filteredMatches = r.matches.filter((m) => selectedSet.has(m.farmer.crop));
   const filteredPallets = filteredMatches.reduce((sum, m) => sum + m.farmer.pallets, 0);
   const filteredFillPct = r.capacityPallets > 0 ? Math.min(100, Math.round((filteredPallets / r.capacityPallets) * 100)) : 0;
 
@@ -458,7 +499,7 @@ function Label({ children }: { children: React.ReactNode }) {
 
 function CounterBtn({ onClick, disabled, children }: { onClick: () => void; disabled: boolean; children: React.ReactNode }) {
   return (
-    <button type="button" onClick={onClick} disabled={disabled} style={{ width: "68px", height: "68px", borderRadius: "1rem", background: T.surface, border: `2px solid ${T.border}`, color: disabled ? T.subtle : T.text, fontSize: "2rem", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: disabled ? "not-allowed" : "pointer", flexShrink: 0 }}>
+    <button type="button" onClick={onClick} disabled={disabled} style={{ width: "68px", height: "68px", borderRadius: "1rem", background: T.surface, border: `2px solid ${T.border}`, color: disabled ? T.subtle : T.text, fontSize: "2rem", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: disabled ? "not-allowed" : "pointer", flexShrink: 0, touchAction: "manipulation" }}>
       {children}
     </button>
   );
