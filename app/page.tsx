@@ -492,10 +492,10 @@ export default function App() {
       {animStep >= 2 && metrics && (
         <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: `1px solid ${T.border}` }}>
           <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
-            Twój rachunek · ceny Renk Gdańsk {metrics.priceSource === "ec-agridata" ? <span style={{ color: T.accent }}>live</span> : "szacunek"}
+            Twój rachunek · cena rynkowa PL {metrics.priceSource === "ec-agridata" ? <span style={{ color: T.accent }}>live</span> : "szacunek"}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
-            <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena Renk" accent />
+            <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena rynkowa PL" accent />
             <StatBox label="Oszczędzasz" value={`${userSavingsPln} zł`} sub="vs. własny transport" />
             <StatBox label="CO₂ mniej" value={`${userCo2SavedKg} kg`} sub="Twój udział" />
           </div>
@@ -528,7 +528,7 @@ export default function App() {
       <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: `1px solid ${T.border}` }}>
         <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Twój rachunek</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
-          <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena Renk" accent />
+          <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena rynkowa PL" accent />
           <StatBox label="Oszczędzasz" value={`~${Math.round(userSavingsPln * 0.85)} zł`} sub="vs. własny transport" />
           <StatBox label="CO₂ mniej" value={`~${Math.round(userCo2SavedKg * 0.85)} kg`} sub="Twój udział" />
         </div>
@@ -559,7 +559,7 @@ export default function App() {
       <div style={{ marginTop: "0.75rem" }}>
         <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Twój rachunek</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
-          <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena Renk" accent />
+          <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena rynkowa PL" accent />
           <StatBox label="Oszczędzasz" value={`~${Math.round(userSavingsPln * 0.9)} zł`} sub="kurs powrotny" />
           <StatBox label="CO₂ mniej" value={`~${Math.round(userCo2SavedKg * 1.2)} kg`} sub="kurs powrotny" />
         </div>
