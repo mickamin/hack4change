@@ -25,7 +25,9 @@ export default function Map({ points, isOnline, focusPoint, route, fitPadding }:
   const mapInstanceRef = useRef<any>(null);
   const routeDrawnRef = useRef(false);
   const routeRef = useRef(route);
+  const pointsRef = useRef(points);
   useEffect(() => { routeRef.current = route; }, [route]);
+  useEffect(() => { pointsRef.current = points; }, [points]);
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
@@ -51,7 +53,10 @@ export default function Map({ points, isOnline, focusPoint, route, fitPadding }:
       setTimeout(() => map.invalidateSize(), 200);
       setTimeout(() => {
         map.invalidateSize();
-        // Draw route if it was already set before leaflet finished loading
+        // Render markers if already set before leaflet finished loading
+        const pts = pointsRef.current;
+        if (pts && pts.length > 0) renderMarkers(L, map, pts);
+        // Draw route if already set before leaflet finished loading
         const r = routeRef.current;
         if (r && r.length >= 2 && !routeDrawnRef.current) {
           routeDrawnRef.current = true;
