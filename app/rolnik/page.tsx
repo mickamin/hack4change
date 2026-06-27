@@ -158,11 +158,9 @@ export default function App() {
 
   const allFarmers = routeData?.farmers ?? [];
   const visibleFarmers = allFarmers.slice(0, countedFarmers);
-  const hub = routeData?.hub;
   const mapPoints = [
-    ...visibleFarmers.map(f => ({ lat: f.lat, lng: f.lng, name: f.name, isHub: false, isUser: false })),
+    ...visibleFarmers.map((f, i) => ({ lat: f.lat, lng: f.lng, name: f.name, isHub: i === 0, isUser: false })),
     ...(userFarmer ? [{ lat: userFarmer.lat, lng: userFarmer.lng, name: `${userFarmer.name} (Ty)`, isUser: true, isHub: false }] : []),
-    ...(hub && animStep >= 2 ? [{ lat: hub.lat, lng: hub.lng, name: hub.name, isHub: true, isUser: false }] : []),
   ];
 
   const metrics = routeData?.metrics;
@@ -216,17 +214,10 @@ export default function App() {
             AgroPool łączy rolników z tej samej gminy i wysyła jedną ciężarówkę.
           </p>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.75rem" }}>
-            <button onClick={() => setAct(2)} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.25rem 1rem", fontSize: "1rem", fontWeight: 900, cursor: "pointer", boxShadow: `0 6px 20px ${T.accent}55`, touchAction: "manipulation", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.4rem" }}>
-              <span style={{ fontSize: "1.75rem" }}>🌾</span>
-              Jestem rolnikiem
-            </button>
-            <a href="/przewoznik" style={{ background: T.card, color: T.text, border: `2px solid ${T.border}`, borderRadius: "1.25rem", padding: "1.25rem 1rem", fontSize: "1rem", fontWeight: 900, cursor: "pointer", textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.4rem", touchAction: "manipulation" }}>
-              <span style={{ fontSize: "1.75rem" }}>🚚</span>
-              Jestem przewoźnikiem
-            </a>
-          </div>
-          <p style={{ color: T.subtle, fontSize: "0.7rem", marginTop: "0.75rem" }}>Offline-first · Działa bez zasięgu · Powiat Kartuski</p>
+          <button onClick={() => setAct(2)} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.1rem 2.5rem", fontSize: "1.15rem", fontWeight: 900, cursor: "pointer", width: "100%", boxShadow: `0 6px 20px ${T.accent}55`, touchAction: "manipulation" }}>
+            Jestem rolnikiem
+          </button>
+          <p style={{ color: T.subtle, fontSize: "0.7rem", marginTop: "1rem" }}>Offline-first · Działa bez zasięgu · Powiat Kartuski</p>
         </div>
         <div style={{ height: "10dvh" }} />
       </div>
@@ -268,7 +259,7 @@ export default function App() {
           <button onClick={() => setAct(1)} style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1 }}>←</button>
           <div>
             <div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>
-              {status === "joining" ? "Dołącz do puli" : "Zgłoś ładunek"}
+              {status === "joining" ? "Dołącz do puli" : "Załóż pulę"}
             </div>
             <div style={{ fontSize: "0.7rem", color: T.subtle }}>
               {status === "joining" ? `Rolnicy z ${selectedCommune.name} już czekają` : "Bądź pierwszy w swojej gminie"}
@@ -282,18 +273,45 @@ export default function App() {
           {/* Commune picker */}
           <section>
             <Label>Twoja gmina</Label>
-            <select
-              value={selectedCommune.code}
-              onChange={e => {
-                const c = TERYT_COMMUNES.find(c => c.code === Number(e.target.value));
-                if (c) setSelectedCommune(c);
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem" }}>
+              {TERYT_COMMUNES.filter(c => c.powiat !== "Gdańsk").map(c => {
+                const active = selectedCommune.code === c.code;
+                return (
+                  <button key={c.code} type="button" onClick={() => setSelectedCommune(c)}
+                    style={{ padding: "0.75rem 0.4rem", borderRadius: "0.875rem", border: `2px solid ${active ? T.accent : T.border}`, background: active ? "#f0faeb" : T.surface, cursor: "pointer", touchAction: "manipulation", transition: "border-color 0.12s, background 0.12s" }}>
+                    <span style={{ fontSize: "0.82rem", fontWeight: active ? 800 : 600, color: active ? T.accent : T.text }}>{c.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Location picker map */}
+          <section>
+            <Label>Lokalizacja pola</Label>
+            <LocationPicker
+              defaultLat={(selectedCommune.latMin + selectedCommune.latMax) / 2}
+              defaultLng={(selectedCommune.lngMin + selectedCommune.lngMax) / 2}
+              onPick={loc => {
+                setPickedLat(loc.lat);
+                setPickedLng(loc.lng);
+                setAddress(loc.address);
               }}
-              style={{ background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.875rem", color: T.text, width: "100%", padding: "0.875rem 1rem", fontSize: "1rem", outline: "none", boxSizing: "border-box", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a6a48' strokeWidth='1.5' fill='none' strokeLinecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 1rem center", paddingRight: "2.5rem" }}
-            >
-              {TERYT_COMMUNES.filter(c => c.powiat !== "Gdańsk").map(c => (
-                <option key={c.code} value={c.code}>{c.name} ({c.powiat})</option>
-              ))}
-            </select>
+            />
+            {address ? (
+              <div style={{ marginTop: "0.5rem", padding: "0.625rem 0.875rem", background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.75rem", fontSize: "0.85rem", color: T.muted }}>
+                {address}
+              </div>
+            ) : (
+              <p style={{ marginTop: "0.375rem", fontSize: "0.75rem", color: T.subtle }}>Tapnij mapę lub przesuń pinezkę na swoje pole.</p>
+            )}
+          </section>
+
+          {/* Contact fields */}
+          <section style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+            <Label>Dane kontaktowe</Label>
+            <input type="text" placeholder="Imię" value={farmerName} onChange={e => setFarmerName(e.target.value)} style={inputBase} />
+            <input type="tel" placeholder="Telefon (kierowca oddzwoni)" value={phone} onChange={e => setPhone(e.target.value)} style={inputBase} />
           </section>
 
           {/* Crop search + results */}
@@ -355,30 +373,9 @@ export default function App() {
             </section>
           )}
 
-          {/* Location picker map */}
-          <section>
-            <Label>Miejsce odbioru</Label>
-            <LocationPicker
-              defaultLat={(selectedCommune.latMin + selectedCommune.latMax) / 2}
-              defaultLng={(selectedCommune.lngMin + selectedCommune.lngMax) / 2}
-              onPick={loc => {
-                setPickedLat(loc.lat);
-                setPickedLng(loc.lng);
-                setAddress(loc.address);
-              }}
-            />
-          </section>
-
-          {/* Contact fields */}
-          <section style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-            <Label>Dane kontaktowe</Label>
-            <input type="text" placeholder="Imię" value={farmerName} onChange={e => setFarmerName(e.target.value)} style={inputBase} />
-            <input type="tel" placeholder="Telefon (kierowca oddzwoni)" value={phone} onChange={e => setPhone(e.target.value)} style={inputBase} />
-          </section>
-
           {canSubmit && (
             <button type="button" onClick={handleSubmit} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.2rem", fontSize: "1.1rem", fontWeight: 900, cursor: "pointer", width: "100%", boxShadow: `0 6px 20px ${T.accent}44`, touchAction: "manipulation" }}>
-              {status === "joining" ? "Dołącz do puli" : "Zgłoś ładunek"}
+              {status === "joining" ? "Dołącz do puli" : "Załóż pulę"}
             </button>
           )}
 
@@ -389,15 +386,14 @@ export default function App() {
   }
 
   // ── ACT 3 ─────────────────────────────────────────────────────────────────
-  const creator = allFarmers.find(f => f.isPoolCreator) ?? allFarmers[0] ?? null;
   const panelContent = (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflowY: "auto" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflowY: "auto" }}>
       {/* Pool header */}
-      <div style={{ padding: "1.25rem 1.25rem 0.875rem", borderBottom: `1px solid ${T.border}` }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+      <div style={{ padding: "1.25rem 1.25rem 0.75rem", borderBottom: `1px solid ${T.border}` }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.25rem" }}>
           <div>
             <div style={{ fontWeight: 900, fontSize: "1rem", color: T.text }}>
-              Pula · {userFarmer?.village ?? creator?.village ?? "Kartuzy"}
+              Pula · {userFarmer?.village ?? "Kartuzy"}
             </div>
             <div style={{ fontSize: "0.72rem", color: T.subtle, marginTop: "0.1rem" }}>
               Zamknięcie: {nextThursday()}, 23:59
@@ -406,30 +402,11 @@ export default function App() {
           <OnlineBadge isOnline={isOnline} />
         </div>
 
-        {/* Creator contact */}
-        {creator && (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0.75rem", background: T.surface, borderRadius: "0.75rem", border: `1px solid ${T.border}`, marginBottom: "0.875rem" }}>
-            <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: T.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <span style={{ fontSize: "0.7rem", fontWeight: 900, color: "#fff" }}>{creator.name.charAt(0)}</span>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: "0.75rem", fontWeight: 700, color: T.text }}>{creator.name}</div>
-              <div style={{ fontSize: "0.68rem", color: T.subtle }}>Założył pulę</div>
-            </div>
-            <a href={`tel:${creator.phone.replace(/\s/g, "")}`}
-              style={{ display: "flex", alignItems: "center", gap: "0.3rem", padding: "0.375rem 0.75rem", background: T.accent, color: "#fff", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, textDecoration: "none", flexShrink: 0 }}>
-              Zadzwoń
-            </a>
-          </div>
-        )}
-
         {/* Truck capacity bar */}
-        <div>
+        <div style={{ marginTop: "0.875rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: T.muted, marginBottom: "0.3rem" }}>
             <span>{poolPallets} / {TRUCK_CAPACITY} palet</span>
-            <span style={{ color: poolPct >= 100 ? T.accent : T.subtle, fontWeight: 700 }}>
-              {poolPct >= 100 ? "Ciężarówka gotowa!" : `jeszcze ${TRUCK_CAPACITY - poolPallets} palet`}
-            </span>
+            <span style={{ color: poolPct >= 100 ? T.accent : T.subtle }}>{poolPct >= 100 ? "Ciężarówka gotowa!" : `Brakuje ${TRUCK_CAPACITY - poolPallets} palet`}</span>
           </div>
           <div style={{ height: "8px", background: T.surface, borderRadius: "999px", overflow: "hidden", border: `1px solid ${T.border}` }}>
             <div style={{ height: "100%", width: `${poolPct}%`, background: poolPct >= 100 ? T.accent : T.accentHi, borderRadius: "999px", transition: "width 0.6s ease" }} />
@@ -452,27 +429,21 @@ export default function App() {
             )
         }
         {visibleFarmers.map(f => (
-          <FarmerRow key={f.id} name={f.name} crop={f.crop} pallets={f.pallets} isCreator={!!f.isPoolCreator} />
+          <FarmerRow key={f.id} name={f.name} crop={f.crop} pallets={f.pallets} />
         ))}
       </div>
 
       {/* Metrics */}
       {animStep >= 2 && metrics && (
-        <div style={{ padding: "0.875rem 1.25rem", borderBottom: `1px solid ${T.border}` }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.625rem" }}>
-            <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              Wspólna dostawa vs. samodzielnie
+        <div style={{ padding: "0.75rem 1.25rem", borderBottom: `1px solid ${T.border}` }}>
+          <div style={{ background: "#f0faeb", border: `1px solid #b0d88a`, borderRadius: "0.875rem", padding: "0.875rem" }}>
+            <div style={{ fontSize: "0.8rem", fontWeight: 800, color: T.accent, marginBottom: "0.625rem" }}>
+              1 ciężarówka zamiast {allFarmers.length} vanów
             </div>
-            <span style={{ fontSize: "0.58rem", fontWeight: 700, color: metrics.priceSource === "ec-agridata" ? T.accent : T.subtle, background: metrics.priceSource === "ec-agridata" ? "#e8f5e0" : T.surface, border: `1px solid ${metrics.priceSource === "ec-agridata" ? T.accent + "44" : T.border}`, borderRadius: "4px", padding: "1px 5px" }}>
-              {metrics.priceSource === "ec-agridata" ? "EC live" : "szacunek"}
-            </span>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "0.625rem" }}>
-            <StatBox label="Oszczędność" value={`${metrics.costSavedPln.toFixed(0)} zł`} sub={`trasa ${metrics.milkRunDistanceKm} km`} accent />
-            <StatBox label="CO₂ mniej" value={`${metrics.co2SavedKg} kg`} sub={`${allFarmers.length} vanów → 1 TIR`} />
-          </div>
-          <div style={{ fontSize: "0.7rem", color: T.muted, textAlign: "center" }}>
-            Wartość ładunku: <strong style={{ color: T.text }}>{metrics.cargoValuePln.toLocaleString("pl-PL")} zł</strong>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+              <StatBox label="CO₂" value={`${metrics.co2SavedKg} kg`} />
+              <StatBox label="Oszczędność" value={`${metrics.costSavedPln.toFixed(0)} zł`} />
+            </div>
           </div>
         </div>
       )}
@@ -480,7 +451,7 @@ export default function App() {
       {/* Actions */}
       <div style={{ padding: "0.875rem 1.25rem", display: "flex", gap: "0.625rem" }}>
         <button onClick={() => { setAct(2); resetForm(); }} style={{ flex: 1, padding: "0.75rem", borderRadius: "0.875rem", border: `1.5px solid ${T.border}`, background: T.surface, color: T.muted, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>
-          + Dołącz
+          + Nowe zgłoszenie
         </button>
         <button onClick={() => setAct(1)} style={{ flex: 1, padding: "0.75rem", borderRadius: "0.875rem", border: "none", background: T.accent, color: "#fff", fontWeight: 900, fontSize: "0.85rem", cursor: "pointer" }}>
           Start
@@ -489,21 +460,22 @@ export default function App() {
     </div>
   );
 
-  // Desktop: full-screen map + overlaid side panel
+  // Desktop: side panel | Mobile: bottom sheet
   if (!isMobile) {
     return (
-      <div style={{ height: "100vh", position: "relative", overflow: "hidden" }}>
-        {/* Map — always full width */}
-        <Map points={mapPoints} route={animStep >= 2 ? orderedRoute : undefined} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} />
-
-        {/* Top-left logo */}
-        <div style={{ position: "absolute", top: "1rem", left: "1rem", zIndex: 500, background: "rgba(255,253,247,0.92)", border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.4rem 0.875rem", display: "flex", alignItems: "center", gap: "0.4rem", backdropFilter: "blur(6px)" }}>
-          <span>🌾</span>
-          <span style={{ fontWeight: 900, fontSize: "0.9rem", color: T.accentHi }}>AgroPool</span>
+      <div style={{ height: "100vh", display: "flex", overflow: "hidden" }}>
+        {/* Map */}
+        <div style={{ flex: 1, position: "relative" }}>
+          <Map points={mapPoints} route={orderedRoute} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} />
+          {/* Top-left logo */}
+          <div style={{ position: "absolute", top: "1rem", left: "1rem", zIndex: 500, background: "rgba(255,253,247,0.92)", border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.4rem 0.875rem", display: "flex", alignItems: "center", gap: "0.4rem", backdropFilter: "blur(6px)" }}>
+            <span>🌾</span>
+            <span style={{ fontWeight: 900, fontSize: "0.9rem", color: T.accentHi }}>AgroPool</span>
+          </div>
         </div>
 
-        {/* Side panel — slides in from right, overlays map */}
-        <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "360px", zIndex: 500, background: T.card, borderLeft: `1px solid ${T.border}`, display: "flex", flexDirection: "column", transform: showPanel ? "translateX(0)" : "translateX(100%)", transition: "transform 0.5s cubic-bezier(0.34,1.2,0.64,1)", boxShadow: "-8px 0 32px rgba(0,0,0,0.12)" }}>
+        {/* Side panel */}
+        <div style={{ width: "340px", flexShrink: 0, background: T.card, borderLeft: `1px solid ${T.border}`, display: "flex", flexDirection: "column", transform: showPanel ? "translateX(0)" : "translateX(100%)", transition: "transform 0.5s cubic-bezier(0.34,1.2,0.64,1)" }}>
           {panelContent}
         </div>
       </div>
@@ -514,7 +486,7 @@ export default function App() {
   return (
     <div style={{ height: "100dvh", position: "relative", overflow: "hidden" }}>
       <div style={{ position: "absolute", inset: 0 }}>
-        <Map points={mapPoints} route={animStep >= 2 ? orderedRoute : undefined} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} />
+        <Map points={mapPoints} route={orderedRoute} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} />
       </div>
 
       {/* Top bar */}
@@ -536,22 +508,15 @@ export default function App() {
 
 // ── Micro-components ──────────────────────────────────────────────────────────
 
-function FarmerRow({ name, crop, pallets, isUser, isCreator }: { name: string; crop: string; pallets: number; isUser?: boolean; isCreator?: boolean }) {
-  const avatarBg = isUser ? "#fffae8" : isCreator ? "#f0faeb" : T.surface;
-  const avatarBorder = isUser ? T.gold : isCreator ? T.accent : T.border;
-  const avatarColor = isUser ? T.gold : isCreator ? T.accent : T.muted;
-  const avatarLabel = isUser ? "TY" : name.charAt(0);
+function FarmerRow({ name, crop, pallets, isUser }: { name: string; crop: string; pallets: number; isUser?: boolean }) {
   return (
     <div style={{ display: "flex", alignItems: "center", padding: "0.5rem 0", borderBottom: `1px solid ${T.border}`, gap: "0.625rem" }}>
-      <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: avatarBg, border: `1.5px solid ${avatarBorder}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        <span style={{ fontSize: "0.65rem", fontWeight: 800, color: avatarColor }}>{avatarLabel}</span>
+      <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: isUser ? "#fffae8" : T.surface, border: `1.5px solid ${isUser ? T.gold : T.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <span style={{ fontSize: "0.65rem", fontWeight: 800, color: isUser ? T.gold : T.muted }}>{isUser ? "TY" : name.charAt(0)}</span>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-          <span style={{ fontWeight: 700, fontSize: "0.85rem", color: isUser ? T.gold : T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {isUser ? "Ty" : name.split(" ")[0]}
-          </span>
-          {isCreator && <span style={{ fontSize: "0.58rem", fontWeight: 700, color: T.accent, background: "#e8f5e0", border: `1px solid ${T.accent}44`, borderRadius: "4px", padding: "0 4px" }}>założyciel</span>}
+        <div style={{ fontWeight: 700, fontSize: "0.85rem", color: isUser ? T.gold : T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {isUser ? "Ty" : name.split(" ")[0]}
         </div>
         <div style={{ fontSize: "0.72rem", color: T.subtle }}>{capitalize(crop)}</div>
       </div>
@@ -563,12 +528,11 @@ function FarmerRow({ name, crop, pallets, isUser, isCreator }: { name: string; c
   );
 }
 
-function StatBox({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
+function StatBox({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ background: accent ? "#f0faeb" : T.card, border: `1px solid ${accent ? "#b0d88a" : T.border}`, borderRadius: "0.625rem", padding: "0.5rem 0.625rem" }}>
+    <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: "0.625rem", padding: "0.5rem 0.625rem" }}>
       <div style={{ fontSize: "0.6rem", color: T.subtle, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>
-      <div style={{ fontSize: "1rem", fontWeight: 900, color: accent ? T.accent : T.accentHi, fontVariantNumeric: "tabular-nums" }}>{value}</div>
-      {sub && <div style={{ fontSize: "0.6rem", color: T.subtle, marginTop: "0.1rem" }}>{sub}</div>}
+      <div style={{ fontSize: "1rem", fontWeight: 900, color: T.accentHi, fontVariantNumeric: "tabular-nums" }}>{value}</div>
     </div>
   );
 }
