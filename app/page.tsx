@@ -21,7 +21,7 @@ export default function HomePage() {
         <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", background: T.card, border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.3rem 0.9rem", marginBottom: "1.75rem" }}>
           <span>🌾</span>
           <span style={{ fontWeight: 800, fontSize: "0.85rem", color: T.accentHi }}>AgroPool</span>
-          <span style={{ fontSize: "0.65rem", color: T.subtle }}>· Powiat Kartuski</span>
+
         </div>
 
         <h1 style={{ fontSize: "clamp(1.7rem, 6vw, 2.3rem)", fontWeight: 900, color: T.text, lineHeight: 1.2, letterSpacing: "-0.02em", margin: "0 0 0.75rem" }}>
