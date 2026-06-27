@@ -208,7 +208,7 @@ export default function PrzewoznikPage() {
   if (!hydrated) {
     return (
       <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontSize: "1.2rem", color: T.muted, fontWeight: 700 }}>Ladowanie...</span>
+        <span style={{ fontSize: "1.2rem", color: T.muted, fontWeight: 700 }}>Ładowanie...</span>
       </div>
     );
   }
@@ -226,15 +226,15 @@ export default function PrzewoznikPage() {
         <div style={{ background: T.card, borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: "1rem", padding: "1rem 1.25rem" }}>
           <a href="/" style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1, textDecoration: "none" }}>&#8592;</a>
           <div>
-            <div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>Zglos pusty kurs</div>
-            <div style={{ fontSize: "0.7rem", color: T.subtle }}>Trasa, termin i wolna zaladownosc</div>
+            <div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>Zgłoś pusty kurs</div>
+            <div style={{ fontSize: "0.7rem", color: T.subtle }}>Trasa, termin i wolna załadowność</div>
           </div>
           <div style={{ marginLeft: "auto" }}><OnlineBadge isOnline={isOnline} /></div>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem", maxWidth: "520px", width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
           <section style={{ position: "relative" }}>
-            <Label>Skad jedziesz</Label>
+            <Label>Skąd jedziesz</Label>
             <input
               type="text"
               placeholder="np. Sierakowice, Kartuzy..."
@@ -248,7 +248,7 @@ export default function PrzewoznikPage() {
           </section>
 
           <section style={{ position: "relative" }}>
-            <Label>Dokad (cel kursu)</Label>
+            <Label>Dokąd (cel kursu)</Label>
             <input
               type="text"
               placeholder="np. Gdansk, Warszawa..."
@@ -267,7 +267,7 @@ export default function PrzewoznikPage() {
           </section>
 
           <section>
-            <Label>Wolna zaladownosc</Label>
+            <Label>Wolna załadowność</Label>
             <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
               <CounterBtn onClick={() => setCapacity((p) => Math.max(1, p - 1))} disabled={capacity <= 1}>-</CounterBtn>
               <div style={{ flex: 1, textAlign: "center" }}>
@@ -282,13 +282,13 @@ export default function PrzewoznikPage() {
             <Label>Cennik przewozu</Label>
             <div style={{ display: "flex", gap: "0.75rem" }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: "0.7rem", color: T.muted, marginBottom: "0.3rem" }}>Za palete (zl)</div>
+                <div style={{ fontSize: "0.7rem", color: T.muted, marginBottom: "0.3rem" }}>Za paletę (zł)</div>
                 <input type="number" value={pricePerPallet} min={0} step={5}
                   onChange={(e) => { const raw = e.target.value; if (raw === "") { setPricePerPallet(""); return; } const v = parseFloat(raw); if (!isNaN(v) && v >= 0) setPricePerPallet(v); }}
                   style={{ ...inputBase, textAlign: "center", fontSize: "1.1rem", fontWeight: 700 }} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: "0.7rem", color: T.muted, marginBottom: "0.3rem" }}>Za kg (zl)</div>
+                <div style={{ fontSize: "0.7rem", color: T.muted, marginBottom: "0.3rem" }}>Za kg (zł)</div>
                 <input type="number" value={pricePerKg} min={0} step={0.01}
                   onChange={(e) => { const raw = e.target.value; if (raw === "") { setPricePerKg(""); return; } const v = parseFloat(raw); if (!isNaN(v) && v >= 0) setPricePerKg(v); }}
                   style={{ ...inputBase, textAlign: "center", fontSize: "1.1rem", fontWeight: 700 }} />
@@ -298,10 +298,10 @@ export default function PrzewoznikPage() {
 
           {/* Crop picker */}
           <section>
-            <Label>Co moge zabrac</Label>
+            <Label>Co mogę zabrać</Label>
             <input
               type="text"
-              placeholder={cropsLoading ? "Ladowanie upraw..." : "Szukaj uprawy..."}
+              placeholder={cropsLoading ? "Ładowanie upraw..." : "Szukaj uprawy…"}
               value={cropSearch}
               onChange={(e) => setCropSearch(e.target.value)}
               disabled={cropsLoading}
@@ -309,10 +309,10 @@ export default function PrzewoznikPage() {
             />
             {cropsLoading ? (
               <div style={{ textAlign: "center", padding: "1rem", color: T.subtle, fontSize: "0.85rem" }}>
-                Ladowanie...
+                Ładowanie...
               </div>
             ) : cropSearch.trim() && filteredCrops.length === 0 ? (
-              <p style={{ color: T.subtle, fontSize: "0.85rem", margin: 0 }}>Brak wynikow.</p>
+              <p style={{ color: T.subtle, fontSize: "0.85rem", margin: 0 }}>Brak wyników.</p>
             ) : cropSearch.trim() ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", maxHeight: "200px", overflowY: "auto" }}>
                 {filteredCrops.slice(0, 12).map((crop) => {
@@ -331,7 +331,7 @@ export default function PrzewoznikPage() {
 
           {selectedCrops.length > 0 && (
             <section>
-              <Label>Moje ladunki</Label>
+              <Label>Moje ładunki</Label>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {selectedCrops.map((sc) => (
                   <div key={sc.name} style={{ padding: "0.875rem", background: T.card, border: `1.5px solid ${T.accent}55`, borderRadius: "0.875rem" }}>
@@ -384,7 +384,7 @@ export default function PrzewoznikPage() {
               touchAction: "manipulation",
             }}
           >
-            {loading ? "Szukam towaru..." : "Szukaj towaru po drodze"}
+            {loading ? "Szukam towaru…" : "Szukaj towaru po drodze →"}
           </button>
           <div style={{ height: "1rem" }} />
         </div>
@@ -429,7 +429,7 @@ export default function PrzewoznikPage() {
       <div style={{ flex: 1, overflowY: "auto", padding: "1rem 1.25rem", maxWidth: "560px", width: "100%", margin: "0 auto" }}>
         <div style={{ marginBottom: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: T.muted, marginBottom: "0.3rem" }}>
-            <span>{filteredPallets} / {r.capacityPallets} palet zapelnione</span>
+            <span>{filteredPallets} / {r.capacityPallets} palet zapełnione</span>
             <span style={{ color: filteredFillPct >= 100 ? T.accent : T.subtle }}>{filteredFillPct}%</span>
           </div>
           <div style={{ height: "8px", background: T.surface, borderRadius: "999px", overflow: "hidden", border: `1px solid ${T.border}` }}>
@@ -439,7 +439,7 @@ export default function PrzewoznikPage() {
 
         {filteredMatches.length === 0 ? (
           <div style={{ background: "#fdf4e6", border: `1px solid ${T.gold}`, borderRadius: "0.875rem", padding: "1rem", color: T.text, fontSize: "0.9rem" }}>
-            Brak nadwyzek w korytarzu tej trasy dla wybranych typow ladunku. Sprobuj innego celu, zwieksz zaladownosc lub zmien filtr ladunku.
+            Brak nadwyżek w korytarzu tej trasy dla wybranych typów ładunku. Spróbuj innego celu, zwiększ załadowność lub zmień filtr ładunku.
           </div>
         ) : (
           <>
@@ -455,29 +455,29 @@ export default function PrzewoznikPage() {
                 </div>
                 <div style={{ flexShrink: 0, textAlign: "right" }}>
                   <div style={{ fontWeight: 900, fontSize: "0.95rem", color: T.accent, fontVariantNumeric: "tabular-nums" }}>{m.farmer.pallets} pal.</div>
-                  <div style={{ fontSize: "0.7rem", color: T.gold, fontWeight: 700 }}>{(m.farmer.pallets * (pricePerPallet || 0)).toLocaleString("pl-PL")} zl</div>
+                  <div style={{ fontSize: "0.7rem", color: T.gold, fontWeight: 700 }}>{(m.farmer.pallets * (pricePerPallet || 0)).toLocaleString("pl-PL")} zł</div>
                 </div>
               </div>
             ))}
 
             <div style={{ marginTop: "1rem", background: "#f0faeb", border: "1px solid #b0d88a", borderRadius: "0.875rem", padding: "0.875rem" }}>
               <div style={{ fontSize: "0.8rem", fontWeight: 800, color: T.accent, marginBottom: "0.625rem" }}>
-                Pusty kurs zamieniony w {filteredPallets} palet ladunku
+                Pusty kurs zamieniony w {filteredPallets} palet ładunku
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
-                <StatBox label="Twoj zarobek" value={`${(filteredPallets * (pricePerPallet || 0)).toLocaleString("pl-PL")} zl`} />
-                <StatBox label="CO2 zaoszczedzone" value={`${r.co2SavedKg} kg`} />
-                <StatBox label="Wartosc ladunku" value={`${r.cargoValuePln.toLocaleString("pl-PL")} zl`} />
+                <StatBox label="Twój zarobek" value={`${(filteredPallets * (pricePerPallet || 0)).toLocaleString("pl-PL")} zł`} />
+                <StatBox label="CO₂ zaoszczędzone" value={`${r.co2SavedKg} kg`} />
+                <StatBox label="Wartość ładunku" value={`${r.cargoValuePln.toLocaleString("pl-PL")} zł`} />
               </div>
             </div>
           </>
         )}
 
-        {/* Dystrybutorzy szukajacy towaru */}
+        {/* Dystrybutorzy szukający towaru */}
         {r.distributorMatches.length > 0 && (
           <div style={{ marginTop: "1.25rem" }}>
             <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.gold, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
-              Dystrybutorzy szukajacy towaru ({r.distributorMatches.length})
+              Dystrybutorzy szukający towaru ({r.distributorMatches.length})
             </div>
             {r.distributorMatches.map((dm) => (
               <div key={dm.distributor.id} style={{ display: "flex", alignItems: "center", padding: "0.6rem 0", borderBottom: `1px solid ${T.border}`, gap: "0.7rem" }}>

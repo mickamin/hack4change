@@ -16,7 +16,7 @@ const T = {
 
 type Act = 1 | 2 | 3;
 type Unit = "palety" | "kg";
-interface SelectedCrop { name: string; qty: number; unit: Unit }
+interface SelectedCrop { name: string; qty: number | ""; unit: Unit }
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -74,7 +74,7 @@ export default function DystrybutorPage() {
     if (selectedCrops.length === 0) return;
     setLoading(true);
     const first = selectedCrops[0];
-    const neededPallets = first.unit === "palety" ? first.qty : Math.ceil(first.qty / 600);
+    const neededPallets = first.unit === "palety" ? (first.qty || 0) : Math.ceil((first.qty || 0) / 600);
     try {
       const res = await fetch("/api/distributors", {
         method: "POST",
@@ -107,7 +107,7 @@ export default function DystrybutorPage() {
   }
 
   if (!hydrated) {
-    return <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: "1.2rem", color: T.muted, fontWeight: 700 }}>Ladowanie...</span></div>;
+    return <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: "1.2rem", color: T.muted, fontWeight: 700 }}>Ładowanie...</span></div>;
   }
 
   // ── AKT 1 ───────────────────────────────────────────────────────────────────
@@ -116,7 +116,7 @@ export default function DystrybutorPage() {
       <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
         <div style={{ maxWidth: "440px", width: "100%", textAlign: "center" }}>
           <h1 style={{ fontSize: "clamp(1.6rem, 6vw, 2.2rem)", fontWeight: 900, color: T.text, lineHeight: 1.2, letterSpacing: "-0.02em", margin: "0 0 1rem" }}>
-            Szukasz towaru hurtem?<br /><span style={{ color: T.accentHi }}>Zbierz nadwyzki z regionu.</span>
+            Szukasz towaru hurtowo?<br /><span style={{ color: T.accentHi }}>Zbierz nadwyżki z regionu.</span>
           </h1>
           <button onClick={() => setAct(2)} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.1rem 2.5rem", fontSize: "1.15rem", fontWeight: 900, cursor: "pointer", width: "100%", boxShadow: `0 6px 20px ${T.accent}55` }}>
             Jestem dystrybutorem
@@ -134,7 +134,7 @@ export default function DystrybutorPage() {
       <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", color: T.text }}>
         <div style={{ background: T.card, borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: "1rem", padding: "1rem 1.25rem" }}>
           <a href="/" style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1, textDecoration: "none" }}>&#8592;</a>
-          <div><div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>Czego potrzebujesz</div><div style={{ fontSize: "0.7rem", color: T.subtle }}>Produkt, ilosc i miejsce dostawy</div></div>
+          <div><div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>Czego potrzebujesz</div><div style={{ fontSize: "0.7rem", color: T.subtle }}>Produkt, ilość i miejsce dostawy</div></div>
           <div style={{ marginLeft: "auto" }}><OnlineBadge isOnline={isOnline} /></div>
         </div>
 
@@ -144,16 +144,16 @@ export default function DystrybutorPage() {
             <Label>Jaki produkt</Label>
             <input
               type="text"
-              placeholder={cropsLoading ? "Ladowanie upraw..." : "Szukaj uprawy..."}
+              placeholder={cropsLoading ? "Ładowanie upraw..." : "Szukaj uprawy…"}
               value={cropSearch}
               onChange={(e) => setCropSearch(e.target.value)}
               disabled={cropsLoading}
               style={{ ...inputBase, marginBottom: "0.625rem" }}
             />
             {cropsLoading ? (
-              <div style={{ textAlign: "center", padding: "1rem", color: T.subtle, fontSize: "0.85rem" }}>Ladowanie...</div>
+              <div style={{ textAlign: "center", padding: "1rem", color: T.subtle, fontSize: "0.85rem" }}>Ładowanie...</div>
             ) : cropSearch.trim() && filteredCrops.length === 0 ? (
-              <p style={{ color: T.subtle, fontSize: "0.85rem", margin: 0 }}>Brak wynikow.</p>
+              <p style={{ color: T.subtle, fontSize: "0.85rem", margin: 0 }}>Brak wyników.</p>
             ) : cropSearch.trim() ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", maxHeight: "200px", overflowY: "auto" }}>
                 {filteredCrops.slice(0, 12).map((c) => {
@@ -173,7 +173,7 @@ export default function DystrybutorPage() {
           {/* Selected crops with qty + unit toggle */}
           {selectedCrops.length > 0 && (
             <section>
-              <Label>Moje zamowienia</Label>
+              <Label>Moje zamówienia</Label>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {selectedCrops.map((sc) => (
                   <div key={sc.name} style={{ padding: "0.875rem", background: T.card, border: `1.5px solid ${T.accent}55`, borderRadius: "0.875rem" }}>
@@ -193,12 +193,12 @@ export default function DystrybutorPage() {
                     </div>
                     {/* Qty counter with manual input */}
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", width: "100%" }}>
-                      <button type="button" onClick={() => updateCrop(sc.name, { qty: Math.max(sc.unit === "palety" ? 1 : 100, sc.qty - (sc.unit === "palety" ? 1 : 100)) })}
+                      <button type="button" onClick={() => updateCrop(sc.name, { qty: Math.max(sc.unit === "palety" ? 1 : 100, (sc.qty || 0) - (sc.unit === "palety" ? 1 : 100)) })}
                         style={{ width: "40px", minWidth: "40px", height: "40px", borderRadius: "0.625rem", background: T.surface, border: `1.5px solid ${T.border}`, color: T.text, fontSize: "1.2rem", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, touchAction: "manipulation" }}>-</button>
                       <input type="number" value={sc.qty}
-                        onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v) && v > 0) updateCrop(sc.name, { qty: v }); }}
+                        onChange={(e) => { const raw = e.target.value; if (raw === "") { updateCrop(sc.name, { qty: "" }); return; } const v = parseInt(raw); if (!isNaN(v) && v > 0) updateCrop(sc.name, { qty: v }); }}
                         style={{ width: "80px", minWidth: 0, flex: "1 1 80px", textAlign: "center", fontSize: "1.3rem", fontWeight: 900, color: T.accent, background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.625rem", padding: "0.4rem 0.25rem", outline: "none", fontVariantNumeric: "tabular-nums", boxSizing: "border-box", MozAppearance: "textfield" } as React.CSSProperties} />
-                      <button type="button" onClick={() => updateCrop(sc.name, { qty: Math.min(sc.unit === "palety" ? 200 : 50000, sc.qty + (sc.unit === "palety" ? 1 : 100)) })}
+                      <button type="button" onClick={() => updateCrop(sc.name, { qty: Math.min(sc.unit === "palety" ? 200 : 50000, (sc.qty || 0) + (sc.unit === "palety" ? 1 : 100)) })}
                         style={{ width: "40px", minWidth: "40px", height: "40px", borderRadius: "0.625rem", background: T.surface, border: `1.5px solid ${T.border}`, color: T.text, fontSize: "1.2rem", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, touchAction: "manipulation" }}>+</button>
                       <span style={{ fontSize: "0.75rem", color: T.muted, fontWeight: 600, flexShrink: 0 }}>{sc.unit === "palety" ? "palet" : "kg"}</span>
                     </div>
@@ -231,7 +231,7 @@ export default function DystrybutorPage() {
           </section>
 
           <button type="button" onClick={handleSubmit} disabled={!canSubmit} style={{ background: canSubmit ? T.accent : T.subtle, color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.2rem", fontSize: "1.1rem", fontWeight: 900, cursor: canSubmit ? "pointer" : "not-allowed", width: "100%", boxShadow: canSubmit ? `0 6px 20px ${T.accent}44` : "none", opacity: loading ? 0.7 : 1 }}>
-            {loading ? "Szukam dostawcow..." : "Znajdz dostawcow"}
+            {loading ? "Szukam dostawców..." : "Znajdź dostawców"}
           </button>
           <div style={{ height: "1rem" }} />
         </div>
@@ -273,12 +273,12 @@ export default function DystrybutorPage() {
 
         {r.matches.length === 0 ? (
           <div style={{ background: "#fdf4e6", border: `1px solid ${T.gold}`, borderRadius: "0.875rem", padding: "1rem", fontSize: "0.9rem" }}>
-            Brak "{r.crop}" w regionie na teraz. Sprobuj innego produktu.
+            Brak "{r.crop}" w regionie na teraz. Spróbuj innego produktu.
           </div>
         ) : (
           <>
             <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
-              Dostawcy w regionie ({r.matches.length} gmin)
+              Dostawcy w okolicy ({r.matches.length} gmin)
             </div>
             {r.matches.map((m) => (
               <div key={m.terytCode} style={{ display: "flex", alignItems: "center", padding: "0.6rem 0", borderBottom: `1px solid ${T.border}`, gap: "0.7rem" }}>
@@ -299,7 +299,7 @@ export default function DystrybutorPage() {
                 {r.gatheredPallets} palet {r.crop.toLowerCase()} z {r.matches.length} gmin
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
-                <StatBox label="Szac. wartosc" value={`${r.estValuePln.toLocaleString("pl-PL")} zl`} />
+                <StatBox label="Szac. wartość" value={`${r.estValuePln.toLocaleString("pl-PL")} zł`} />
                 <StatBox label="Pokrycie" value={`${r.fillPct}%`} />
               </div>
             </div>
