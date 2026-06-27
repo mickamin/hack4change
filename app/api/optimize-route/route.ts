@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
-import {
-  FARMERS,
-  EMISSIONS,
-  VIRTUAL_HUB,
-  ROUTE_CONSTANTS,
-  type Farmer,
-} from "../data/mockData";
+import { FARMERS, VIRTUAL_HUB, type Farmer } from "../data/mockData";
 import type { PricesResponse } from "../prices/route";
+
+// ── DEFRA 2024 GHG Conversion Factors (kg CO₂e / vehicle-km) ─────────────────
+// Source: UK DEFRA/BEIS Greenhouse Gas Reporting: Conversion Factors 2024
+// https://www.gov.uk/government/collections/government-conversion-factors-for-company-reporting
+const DEFRA = {
+  // Average diesel van (≤3.5t), market average fleet
+  vanKgCo2ePerKm: 0.18852,
+  // HGV articulated >34t, average laden (50% load factor)
+  hgvKgCo2ePerKm: 0.73778,
+  // Diesel price PLN/l for fuel cost estimate
+  dieselPlnPerL: 7.2,
+  vanLitersPer100km: 10,
+  hgvLitersPer100km: 32,
+};
 
 export interface OptimizeRouteResponse {
   farmers: Farmer[];
@@ -22,21 +30,13 @@ export interface OptimizeRouteResponse {
     cargoValuePln: number;
     milkRunDistanceKm: number;
     priceSource: "ec-agridata" | "fallback";
+    co2Source: string;
   };
   milkRunRoute: Array<{ lat: number; lng: number; name: string }>;
 }
 
-function calcCo2Kg(distanceKm: number, litersPer100km: number): number {
-  const liters = (distanceKm / 100) * litersPer100km;
-  return liters * EMISSIONS.co2PerLiterDiesel;
-}
 
-function calcFuelCostPln(distanceKm: number, litersPer100km: number): number {
-  const liters = (distanceKm / 100) * litersPer100km;
-  return liters * ROUTE_CONSTANTS.dieselPricePerLiter;
-}
-
-// Fetch real distances from OSRM for a list of waypoints, returns total km
+// OSRM — car/van routing (no vehicle restrictions needed for vans)
 async function osrmDistanceKm(waypoints: Array<{ lat: number; lng: number }>): Promise<number> {
   const coords = waypoints.map(p => `${p.lng},${p.lat}`).join(";");
   try {
@@ -45,11 +45,30 @@ async function osrmDistanceKm(waypoints: Array<{ lat: number; lng: number }>): P
       { next: { revalidate: 3600 } }
     );
     const data = await res.json();
-    const meters: number = data.routes?.[0]?.distance ?? 0;
-    return meters / 1000;
-  } catch {
-    return 0;
-  }
+    return (data.routes?.[0]?.distance ?? 0) / 1000;
+  } catch { return 0; }
+}
+
+// OpenRouteService — HGV profile (respects weight/height/width restrictions)
+// Falls back to OSRM if ORS_API_KEY not set
+async function hgvDistanceKm(waypoints: Array<{ lat: number; lng: number }>): Promise<number> {
+  const apiKey = process.env.ORS_API_KEY;
+  if (!apiKey) return osrmDistanceKm(waypoints);
+  try {
+    const res = await fetch("https://api.openrouteservice.org/v2/directions/driving-hgv", {
+      method: "POST",
+      headers: { "Authorization": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        coordinates: waypoints.map(p => [p.lng, p.lat]),
+        // 24-pallet refrigerated truck: ~40t GVW, 4m height, 2.5m width
+        vehicle_type: "hgv",
+        options: { profile_params: { restrictions: { weight: 40, height: 4.0, width: 2.5 } } },
+      }),
+      next: { revalidate: 3600 },
+    });
+    const data = await res.json();
+    return (data.routes?.[0]?.summary?.distance ?? 0) / 1000;
+  } catch { return osrmDistanceKm(waypoints); }
 }
 
 export async function GET() {
@@ -69,20 +88,21 @@ export async function GET() {
     FARMERS.map(f => osrmDistanceKm([{ lat: f.lat, lng: f.lng }, hub]).then(d => d * 2))
   );
 
-  // Consolidated: one truck picks up all farmers in order, ends at hub
-  const milkRunDistanceKm = await osrmDistanceKm([
+  // Consolidated: HGV route through all farmers → hub (uses ORS HGV profile if key set)
+  const milkRunDistanceKm = await hgvDistanceKm([
     ...routeOrder.map(f => ({ lat: f.lat, lng: f.lng })),
     hub,
   ]);
 
-  // CO2 and cost calculations using real distances
+  // CO2 — DEFRA 2024 GHG Conversion Factors (kg CO₂e / vehicle-km)
   const co2Individual = individualDistances.reduce((sum, d) =>
-    sum + calcCo2Kg(d, EMISSIONS.smallVanLitersPer100km), 0);
-  const costIndividual = individualDistances.reduce((sum, d) =>
-    sum + calcFuelCostPln(d, EMISSIONS.smallVanLitersPer100km), 0);
+    sum + d * DEFRA.vanKgCo2ePerKm, 0);
+  const co2Consolidated = milkRunDistanceKm * DEFRA.hgvKgCo2ePerKm;
 
-  const co2Consolidated = calcCo2Kg(milkRunDistanceKm, EMISSIONS.bigTruckLitersPer100km);
-  const costConsolidated = calcFuelCostPln(milkRunDistanceKm, EMISSIONS.bigTruckLitersPer100km);
+  // Fuel cost — diesel liters × price
+  const costIndividual = individualDistances.reduce((sum, d) =>
+    sum + (d / 100) * DEFRA.vanLitersPer100km * DEFRA.dieselPlnPerL, 0);
+  const costConsolidated = (milkRunDistanceKm / 100) * DEFRA.hgvLitersPer100km * DEFRA.dieselPlnPerL;
 
   // Cargo value from live EC prices
   const cargoValuePln = FARMERS.reduce((sum, f) => {
@@ -110,6 +130,7 @@ export async function GET() {
       cargoValuePln: Math.round(cargoValuePln),
       milkRunDistanceKm: Math.round(milkRunDistanceKm),
       priceSource: pricesRes ? "ec-agridata" : "fallback",
+      co2Source: process.env.ORS_API_KEY ? "DEFRA-2024+ORS-HGV" : "DEFRA-2024+OSRM",
     },
     milkRunRoute,
   };
