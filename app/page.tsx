@@ -358,23 +358,15 @@ export default function App() {
           {/* Location picker map */}
           <section>
             <Label>Miejsce odbioru</Label>
-            <div style={{ border: `1.5px solid ${T.border}`, borderRadius: "0.875rem", overflow: "hidden", background: T.surface }}>
-              <LocationPicker
-                defaultLat={(selectedCommune.latMin + selectedCommune.latMax) / 2}
-                defaultLng={(selectedCommune.lngMin + selectedCommune.lngMax) / 2}
-                onPick={loc => {
-                  setPickedLat(loc.lat);
-                  setPickedLng(loc.lng);
-                  setAddress(loc.address);
-                }}
-              />
-              {address && (
-                <div style={{ padding: "0.625rem 1rem", fontSize: "0.85rem", color: T.muted, borderTop: `1px solid ${T.border}` }}>
-                  {address}
-                </div>
-              )}
-            </div>
-            {!address && <p style={{ marginTop: "0.375rem", fontSize: "0.75rem", color: T.subtle }}>Tapnij mapę lub przesuń pinezkę na miejsce odbioru.</p>}
+            <LocationPicker
+              defaultLat={(selectedCommune.latMin + selectedCommune.latMax) / 2}
+              defaultLng={(selectedCommune.lngMin + selectedCommune.lngMax) / 2}
+              onPick={loc => {
+                setPickedLat(loc.lat);
+                setPickedLng(loc.lng);
+                setAddress(loc.address);
+              }}
+            />
           </section>
 
           {/* Contact fields */}
