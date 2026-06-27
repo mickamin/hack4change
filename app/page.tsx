@@ -357,7 +357,7 @@ export default function App() {
 
           {/* Location picker map */}
           <section>
-            <Label>Lokalizacja pola</Label>
+            <Label>Miejsce odbioru</Label>
             <LocationPicker
               defaultLat={(selectedCommune.latMin + selectedCommune.latMax) / 2}
               defaultLng={(selectedCommune.lngMin + selectedCommune.lngMax) / 2}
@@ -372,7 +372,7 @@ export default function App() {
                 {address}
               </div>
             ) : (
-              <p style={{ marginTop: "0.375rem", fontSize: "0.75rem", color: T.subtle }}>Tapnij mapę lub przesuń pinezkę na swoje pole.</p>
+              <p style={{ marginTop: "0.375rem", fontSize: "0.75rem", color: T.subtle }}>Tapnij mapę lub przesuń pinezkę na miejsce odbioru.</p>
             )}
           </section>
 
