@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import type { OptimizeRouteResponse } from "@/app/api/optimize-route/route";
 import type { Farmer } from "@/app/api/data/mockData";
-import { TERYT_COMMUNES } from "@/app/api/data/mockData";
+import { TERYT_COMMUNES, CROP_AVAILABILITY, type CropKey } from "@/app/api/data/mockData";
 
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
 const LocationPicker = dynamic(() => import("@/components/LocationPicker"), { ssr: false });
@@ -339,6 +339,13 @@ export default function App() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700, fontSize: "0.9rem", color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{capitalize(entry.crop)}</div>
                       <div style={{ fontSize: "0.68rem", color: T.subtle }}>≈ {(entry.pallets * 600).toLocaleString("pl-PL")} kg</div>
+                      {(() => {
+                        const availability = CROP_AVAILABILITY.find(a => a.terytCode === selectedCommune.code);
+                        const pallets = availability?.crops[entry.crop as CropKey] ?? 0;
+                        return pallets > 0
+                          ? <div style={{ fontSize: "0.65rem", color: T.accent, marginTop: "0.15rem" }}>✓ ARiMR: gmina {selectedCommune.name} · {pallets} palet w ewidencji</div>
+                          : <div style={{ fontSize: "0.65rem", color: "#c87050", marginTop: "0.15rem" }}>⚠ ARiMR: uprawa nieewidencjonowana w tej gminie</div>;
+                      })()}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
                       <button type="button" onClick={() => setPalletCount(entry.crop, -1)} disabled={entry.pallets <= 1}
@@ -401,6 +408,10 @@ export default function App() {
             </div>
             <div style={{ fontSize: "0.72rem", color: T.subtle, marginTop: "0.1rem" }}>
               Zamknięcie: {nextThursday()}, 23:59
+            </div>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", marginTop: "0.35rem", padding: "0.2rem 0.6rem", borderRadius: "999px", fontSize: "0.65rem", fontWeight: 700, background: "#f0faeb", border: "1px solid #b0d88a", color: T.accent }}>
+              <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: T.accent, display: "inline-block" }} />
+              Otwarta · Zbieranie zgłoszeń
             </div>
           </div>
           <OnlineBadge isOnline={isOnline} />
