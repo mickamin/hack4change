@@ -49,9 +49,11 @@ export default function App() {
   const [selectedCommune, setSelectedCommune] = useState(TERYT_COMMUNES[0]);
   const [crops, setCrops]               = useState<string[]>([]);
   const [cropsLoading, setCropsLoading] = useState(false);
-  const [selectedCrop, setSelectedCrop] = useState("");
-  const [pallets, setPallets]           = useState(3);
+  const [cropEntries, setCropEntries]   = useState<{crop: string; pallets: number}[]>([]);
+  const [cropSearch, setCropSearch]     = useState("");
   const [farmerName, setFarmerName]     = useState("");
+  const [phone, setPhone]               = useState("");
+  const [address, setAddress]           = useState("");
 
   // Act 3
   const [userFarmer, setUserFarmer]     = useState<Farmer | null>(null);
@@ -100,14 +102,13 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     setCropsLoading(true);
-    setSelectedCrop("");
+    setCropSearch("");
     fetch(`/api/crops?teryt=${selectedCommune.code}`)
       .then(r => r.json())
       .then(json => {
         if (cancelled) return;
         const list: string[] = json.availableCrops ?? [];
         setCrops(list);
-        if (list.length > 0) setSelectedCrop(list[0]);
       })
       .catch(() => { if (!cancelled) setCrops([]); })
       .finally(() => { if (!cancelled) setCropsLoading(false); });
@@ -115,20 +116,24 @@ export default function App() {
   }, [selectedCommune]);
 
   function handleSubmit() {
-    if (!selectedCrop) return;
+    if (cropEntries.length === 0) return;
     const c = selectedCommune;
-    const farmer: Farmer = {
-      id: `reg-${Date.now()}`,
+    const base = {
       name: farmerName.trim() || "Rolnik",
-      phone: "",
+      phone: phone.trim(),
       lat: (c.latMin + c.latMax) / 2,
       lng: (c.lngMin + c.lngMax) / 2,
-      crop: selectedCrop,
-      pallets,
-      village: c.name,
+      village: address.trim() || c.name,
     };
-    enqueue(farmer);
-    setUserFarmer(farmer);
+    // Submit one farmer entry per crop type
+    const farmers = cropEntries.map((e, i) => ({
+      ...base,
+      id: `reg-${Date.now()}-${i}`,
+      crop: e.crop,
+      pallets: e.pallets,
+    }));
+    farmers.forEach(f => enqueue(f));
+    setUserFarmer(farmers[0]);
     setCountedFarmers(0);
     setAnimStep(0);
     setShowPanel(false);
@@ -137,7 +142,7 @@ export default function App() {
 
   function resetForm() {
     setSelectedCommune(TERYT_COMMUNES[0]);
-    setSelectedCrop(""); setPallets(3); setFarmerName("");
+    setCropEntries([]); setCropSearch(""); setFarmerName(""); setPhone(""); setAddress("");
   }
 
   function poolStatus(): "creating" | "joining" {
@@ -199,11 +204,31 @@ export default function App() {
   // ── ACT 2 ─────────────────────────────────────────────────────────────────
   if (act === 2) {
     const status = poolStatus();
-    const canSubmit = selectedCrop !== "";
+    const canSubmit = cropEntries.length > 0;
     const inputBase: React.CSSProperties = {
       background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.875rem",
       color: T.text, width: "100%", padding: "0.875rem 1rem", fontSize: "1rem", outline: "none", boxSizing: "border-box",
     };
+
+    const filteredCrops = cropSearch.trim()
+      ? crops.filter(c => c.toLowerCase().includes(cropSearch.toLowerCase()))
+      : crops;
+
+    function addCrop(crop: string) {
+      if (cropEntries.find(e => e.crop === crop)) return;
+      setCropEntries(prev => [...prev, { crop, pallets: 1 }]);
+      setCropSearch("");
+    }
+
+    function removeCrop(crop: string) {
+      setCropEntries(prev => prev.filter(e => e.crop !== crop));
+    }
+
+    function setPalletCount(crop: string, delta: number) {
+      setCropEntries(prev => prev.map(e =>
+        e.crop === crop ? { ...e, pallets: Math.max(1, Math.min(12, e.pallets + delta)) } : e
+      ));
+    }
 
     return (
       <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", color: T.text }}>
@@ -222,6 +247,14 @@ export default function App() {
 
         <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem", maxWidth: "520px", width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
 
+          {/* Contact fields — top */}
+          <section style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+            <Label>Dane kontaktowe</Label>
+            <input type="text" placeholder="Imię" value={farmerName} onChange={e => setFarmerName(e.target.value)} style={inputBase} />
+            <input type="tel" placeholder="Telefon (kierowca oddzwoni)" value={phone} onChange={e => setPhone(e.target.value)} style={inputBase} />
+            <input type="text" placeholder="Adres pola / miejscowość" value={address} onChange={e => setAddress(e.target.value)} style={inputBase} />
+          </section>
+
           {/* Commune picker */}
           <section>
             <Label>Twoja gmina</Label>
@@ -238,50 +271,62 @@ export default function App() {
             </div>
           </section>
 
-          {/* Crop grid */}
+          {/* Crop search + results */}
           <section>
             <Label>Co zbierasz?</Label>
+            <input
+              type="text"
+              placeholder={cropsLoading ? "Ładowanie upraw…" : "Szukaj uprawy…"}
+              value={cropSearch}
+              onChange={e => setCropSearch(e.target.value)}
+              disabled={cropsLoading}
+              style={{ ...inputBase, marginBottom: "0.625rem" }}
+            />
             {cropsLoading ? (
-              <div style={{ textAlign: "center", padding: "1.5rem", color: T.subtle, fontSize: "0.85rem" }}>
-                <SpinIcon /> Ładowanie upraw…
+              <div style={{ textAlign: "center", padding: "1rem", color: T.subtle, fontSize: "0.85rem" }}>
+                <SpinIcon /> Ładowanie…
               </div>
-            ) : crops.length === 0 ? (
-              <p style={{ color: T.subtle, fontSize: "0.85rem" }}>Brak danych dla tej gminy.</p>
-            ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem", maxHeight: "280px", overflowY: "auto" }}>
-                {crops.map(crop => {
-                  const active = selectedCrop === crop;
+            ) : cropSearch.trim() && filteredCrops.length === 0 ? (
+              <p style={{ color: T.subtle, fontSize: "0.85rem", margin: 0 }}>Brak wyników.</p>
+            ) : cropSearch.trim() ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", maxHeight: "200px", overflowY: "auto" }}>
+                {filteredCrops.slice(0, 12).map(crop => {
+                  const added = !!cropEntries.find(e => e.crop === crop);
                   return (
-                    <button key={crop} type="button" onClick={() => setSelectedCrop(crop)}
-                      style={{ padding: "0.75rem 0.4rem", borderRadius: "0.875rem", border: `2px solid ${active ? T.accent : T.border}`, background: active ? "#f0faeb" : T.surface, cursor: "pointer", touchAction: "manipulation", transition: "border-color 0.12s, background 0.12s" }}>
-                      <span style={{ fontSize: "0.8rem", fontWeight: active ? 800 : 600, color: active ? T.accent : T.text, textAlign: "center", lineHeight: 1.3 }}>{capitalize(crop)}</span>
+                    <button key={crop} type="button" onClick={() => addCrop(crop)} disabled={added}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.625rem 0.875rem", borderRadius: "0.75rem", border: `1.5px solid ${added ? T.accent : T.border}`, background: added ? "#f0faeb" : T.surface, cursor: added ? "default" : "pointer", touchAction: "manipulation" }}>
+                      <span style={{ fontSize: "0.9rem", fontWeight: 600, color: added ? T.accent : T.text }}>{capitalize(crop)}</span>
+                      <span style={{ fontSize: "1rem", color: added ? T.accent : T.subtle }}>{added ? "✓" : "+"}</span>
                     </button>
                   );
                 })}
               </div>
-            )}
+            ) : null}
           </section>
 
-          {/* Pallet counter */}
-          {selectedCrop && (
+          {/* Crop entries with per-crop pallet counter */}
+          {cropEntries.length > 0 && (
             <section>
-              <Label>Ile palet?</Label>
-              <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                <CounterBtn onClick={() => setPallets(p => Math.max(1, p - 1))} disabled={pallets <= 1}>−</CounterBtn>
-                <div style={{ flex: 1, textAlign: "center" }}>
-                  <div style={{ fontSize: "3.5rem", fontWeight: 900, color: T.accent, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{pallets}</div>
-                  <div style={{ fontSize: "0.7rem", color: T.subtle, marginTop: "0.2rem" }}>≈ {(pallets * 600).toLocaleString("pl-PL")} kg</div>
-                </div>
-                <CounterBtn onClick={() => setPallets(p => Math.min(12, p + 1))} disabled={pallets >= 12}>+</CounterBtn>
+              <Label>Moje uprawy</Label>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {cropEntries.map(entry => (
+                  <div key={entry.crop} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 0.875rem", background: T.card, border: `1.5px solid ${T.accent}55`, borderRadius: "0.875rem" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.9rem", color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{capitalize(entry.crop)}</div>
+                      <div style={{ fontSize: "0.68rem", color: T.subtle }}>≈ {(entry.pallets * 600).toLocaleString("pl-PL")} kg</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
+                      <button type="button" onClick={() => setPalletCount(entry.crop, -1)} disabled={entry.pallets <= 1}
+                        style={{ width: "36px", height: "36px", borderRadius: "0.5rem", border: `1.5px solid ${T.border}`, background: T.surface, color: entry.pallets <= 1 ? T.subtle : T.text, fontSize: "1.25rem", fontWeight: 900, cursor: entry.pallets <= 1 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", touchAction: "manipulation" }}>−</button>
+                      <span style={{ fontSize: "1.25rem", fontWeight: 900, color: T.accent, minWidth: "2ch", textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{entry.pallets}</span>
+                      <button type="button" onClick={() => setPalletCount(entry.crop, 1)} disabled={entry.pallets >= 12}
+                        style={{ width: "36px", height: "36px", borderRadius: "0.5rem", border: `1.5px solid ${T.border}`, background: T.surface, color: entry.pallets >= 12 ? T.subtle : T.text, fontSize: "1.25rem", fontWeight: 900, cursor: entry.pallets >= 12 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", touchAction: "manipulation" }}>+</button>
+                    </div>
+                    <button type="button" onClick={() => removeCrop(entry.crop)}
+                      style={{ width: "28px", height: "28px", borderRadius: "50%", border: `1.5px solid ${T.border}`, background: T.surface, color: T.muted, fontSize: "0.9rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, touchAction: "manipulation" }}>×</button>
+                  </div>
+                ))}
               </div>
-            </section>
-          )}
-
-          {/* Name */}
-          {selectedCrop && (
-            <section>
-              <Label>Imię (opcjonalnie)</Label>
-              <input type="text" placeholder="Jan" value={farmerName} onChange={e => setFarmerName(e.target.value)} style={inputBase} />
             </section>
           )}
 
