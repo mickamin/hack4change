@@ -341,9 +341,9 @@ export default function App() {
                       <div style={{ fontSize: "0.68rem", color: T.subtle }}>≈ {(entry.pallets * 600).toLocaleString("pl-PL")} kg</div>
                       {(() => {
                         const availability = CROP_AVAILABILITY.find(a => a.terytCode === selectedCommune.code);
-                        const pallets = availability?.crops[entry.crop as CropKey] ?? 0;
-                        return pallets > 0
-                          ? <div style={{ fontSize: "0.65rem", color: T.accent, marginTop: "0.15rem" }}>✓ ARiMR: gmina {selectedCommune.name} · {pallets} palet w ewidencji</div>
+                        const ha = availability?.ha[entry.crop as CropKey] ?? 0;
+                        return ha > 0
+                          ? <div style={{ fontSize: "0.65rem", color: T.accent, marginTop: "0.15rem" }}>✓ ARiMR 2026: gmina {selectedCommune.name} · {ha.toFixed(2)} ha w ewidencji</div>
                           : <div style={{ fontSize: "0.65rem", color: "#c87050", marginTop: "0.15rem" }}>⚠ ARiMR: uprawa nieewidencjonowana w tej gminie</div>;
                       })()}
                     </div>
