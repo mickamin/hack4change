@@ -112,7 +112,7 @@ export default function PrzewoznikPage() {
   const [pricePerKg, setPricePerKg] = useState<number | "">(0.15);
 
   type Unit = "palety" | "kg";
-  interface SelectedCrop { name: string; qty: number; unit: Unit }
+  interface SelectedCrop { name: string; qty: number | ""; unit: Unit }
   const [allCrops, setAllCrops] = useState<string[]>([]);
   const [cropsLoading, setCropsLoading] = useState(false);
   const [cropSearch, setCropSearch] = useState("");
@@ -349,12 +349,12 @@ export default function PrzewoznikPage() {
                       ))}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", width: "100%" }}>
-                      <button type="button" onClick={() => updateCrop(sc.name, { qty: Math.max(sc.unit === "palety" ? 1 : 100, sc.qty - (sc.unit === "palety" ? 1 : 100)) })}
+                      <button type="button" onClick={() => updateCrop(sc.name, { qty: Math.max(sc.unit === "palety" ? 1 : 100, (sc.qty || 0) - (sc.unit === "palety" ? 1 : 100)) })}
                         style={{ width: "40px", minWidth: "40px", height: "40px", borderRadius: "0.625rem", background: T.surface, border: `1.5px solid ${T.border}`, color: T.text, fontSize: "1.2rem", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, touchAction: "manipulation" }}>-</button>
                       <input type="number" value={sc.qty}
-                        onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v) && v > 0) updateCrop(sc.name, { qty: v }); }}
+                        onChange={(e) => { const raw = e.target.value; if (raw === "") { updateCrop(sc.name, { qty: "" }); return; } const v = parseInt(raw); if (!isNaN(v) && v > 0) updateCrop(sc.name, { qty: v }); }}
                         style={{ width: "80px", minWidth: 0, flex: "1 1 80px", textAlign: "center", fontSize: "1.3rem", fontWeight: 900, color: T.accent, background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.625rem", padding: "0.4rem 0.25rem", outline: "none", fontVariantNumeric: "tabular-nums", boxSizing: "border-box", MozAppearance: "textfield" } as React.CSSProperties} />
-                      <button type="button" onClick={() => updateCrop(sc.name, { qty: Math.min(sc.unit === "palety" ? 200 : 50000, sc.qty + (sc.unit === "palety" ? 1 : 100)) })}
+                      <button type="button" onClick={() => updateCrop(sc.name, { qty: Math.min(sc.unit === "palety" ? 200 : 50000, (sc.qty || 0) + (sc.unit === "palety" ? 1 : 100)) })}
                         style={{ width: "40px", minWidth: "40px", height: "40px", borderRadius: "0.625rem", background: T.surface, border: `1.5px solid ${T.border}`, color: T.text, fontSize: "1.2rem", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, touchAction: "manipulation" }}>+</button>
                       <span style={{ fontSize: "0.75rem", color: T.muted, fontWeight: 600, flexShrink: 0 }}>{sc.unit === "palety" ? "palet" : "kg"}</span>
                     </div>
