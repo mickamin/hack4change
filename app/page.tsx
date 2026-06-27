@@ -15,14 +15,12 @@ const T = {
 
 export default function HomePage() {
   return (
-    <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1.5rem", color: T.text }}>
-      <div style={{ maxWidth: "440px", width: "100%", textAlign: "center" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", background: T.card, border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.3rem 0.9rem", marginBottom: "1.75rem" }}>
-          <span>🌾</span>
-          <span style={{ fontWeight: 800, fontSize: "0.85rem", color: T.accentHi }}>AgroPool</span>
-
-        </div>
-
+    <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", padding: "1.5rem", color: T.text }}>
+      <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", background: T.card, border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.3rem 0.9rem", marginTop: "1rem", marginBottom: "2rem" }}>
+        <span>🌾</span>
+        <span style={{ fontWeight: 800, fontSize: "0.85rem", color: T.accentHi }}>AgroPool</span>
+      </div>
+      <div style={{ maxWidth: "440px", width: "100%", textAlign: "center", flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
         <h1 style={{ fontSize: "clamp(1.7rem, 6vw, 2.3rem)", fontWeight: 900, color: T.text, lineHeight: 1.2, letterSpacing: "-0.02em", margin: "0 0 0.75rem" }}>
           Kim jesteś?
         </h1>
@@ -33,7 +31,7 @@ export default function HomePage() {
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <Link href="/rolnik" style={{ textDecoration: "none" }}>
             <div style={{ background: T.accent, color: "#fff", borderRadius: "1.25rem", padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", gap: "1rem", boxShadow: `0 6px 20px ${T.accent}44`, textAlign: "left" }}>
-              <span style={{ fontSize: "2rem" }}>🌾</span>
+              <span style={{ fontSize: "2rem" }}>🔱</span>
               <span>
                 <span style={{ display: "block", fontSize: "1.15rem", fontWeight: 900 }}>Jestem rolnikiem</span>
                 <span style={{ display: "block", fontSize: "0.8rem", opacity: 0.9 }}>Mam nadwyżkę plonów do oddania</span>
