@@ -160,17 +160,17 @@ export default function App() {
   const allFarmers = routeData?.farmers ?? [];
   const visibleFarmers = allFarmers.slice(0, countedFarmers);
   const hub = routeData?.hub;
-  const mapPoints = [
-    ...visibleFarmers.map(f => ({ lat: f.lat, lng: f.lng, name: f.name, isHub: false, isUser: false })),
-    ...(userFarmer ? [{ lat: userFarmer.lat, lng: userFarmer.lng, name: `${userFarmer.name} (Ty)`, isUser: true, isHub: false }] : []),
-    ...(hub && animStep >= 2 ? [{ lat: hub.lat, lng: hub.lng, name: hub.name, isHub: true, isUser: false }] : []),
-  ];
-
   const metrics = routeData?.metrics;
+
+  const userTotalPallets = cropEntries.length > 0
+    ? cropEntries.reduce((s, e) => s + e.pallets, 0)
+    : (userFarmer?.pallets ?? 0);
+  const poolPallets = visibleFarmers.reduce((s, f) => s + f.pallets, 0) + userTotalPallets;
+  const poolPct = Math.min(100, Math.round((poolPallets / TRUCK_CAPACITY) * 100));
 
   // Insert userFarmer into milkRunRoute at cheapest position
   const milkRun = routeData?.milkRunRoute ?? [];
-  const orderedRoute: Array<{ lat: number; lng: number }> = (() => {
+  const pool1Route: Array<{ lat: number; lng: number }> = (() => {
     if (!userFarmer || milkRun.length === 0) return milkRun;
     const u = { lat: userFarmer.lat, lng: userFarmer.lng, name: userFarmer.name };
     const dist = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) =>
@@ -184,11 +184,6 @@ export default function App() {
     result.splice(bestIdx, 0, u);
     return result;
   })();
-  const userTotalPallets = cropEntries.length > 0
-    ? cropEntries.reduce((s, e) => s + e.pallets, 0)
-    : (userFarmer?.pallets ?? 0);
-  const poolPallets = visibleFarmers.reduce((s, f) => s + f.pallets, 0) + userTotalPallets;
-  const poolPct = Math.min(100, Math.round((poolPallets / TRUCK_CAPACITY) * 100));
 
   if (!hydrated) return <BootScreen />;
 
@@ -401,12 +396,39 @@ export default function App() {
 
   // Mock data for pool 2 and truck
   const pool2Farmers = [
-    { id: "p2f1", name: "Ryszard Kaszubski", crop: "Ziemniaki", pallets: 4, isCreator: true },
-    { id: "p2f2", name: "Bożena Struk",      crop: "Marchew",   pallets: 3, isCreator: false },
-    { id: "p2f3", name: "Henryk Formela",    crop: "Kapusta biała", pallets: 2, isCreator: false },
+    { id: "p2f1", name: "Ryszard Kaszubski", crop: "Ziemniaki",    pallets: 4, isCreator: true,  lat: 54.312, lng: 18.093, village: "Sierakowice" },
+    { id: "p2f2", name: "Bożena Struk",      crop: "Marchew",      pallets: 3, isCreator: false, lat: 54.371, lng: 18.193, village: "Stężyca" },
+    { id: "p2f3", name: "Henryk Formela",    crop: "Kapusta biała", pallets: 2, isCreator: false, lat: 54.362, lng: 18.082, village: "Somonino" },
+  ];
+  const truckStops = [
+    { lat: 54.295, lng: 18.062, name: "Start: Bytów (powrót)" },
+    { lat: 54.312, lng: 18.093, name: "Odbiór: Sierakowice · 3 pal." },
+    { lat: 54.328, lng: 18.154, name: "Odbiór: Kartuzy · 2 pal." },
+    { lat: 54.413, lng: 18.479, name: "Cel: Renk Gdańsk" },
   ];
   const pool2Pallets = pool2Farmers.reduce((s, f) => s + f.pallets, 0) + userTotalPallets;
   const pool2Pct = Math.min(100, Math.round((pool2Pallets / TRUCK_CAPACITY) * 100));
+
+  // Per-pool map data
+  const activeMapPoints = selectedPool === 0
+    ? [
+        ...visibleFarmers.map(f => ({ lat: f.lat, lng: f.lng, name: f.name, isHub: false, isUser: false })),
+        ...(userFarmer ? [{ lat: userFarmer.lat, lng: userFarmer.lng, name: `${userFarmer.name} (Ty)`, isUser: true, isHub: false }] : []),
+        ...(hub && animStep >= 2 ? [{ lat: hub.lat, lng: hub.lng, name: hub.name, isHub: true, isUser: false }] : []),
+      ]
+    : selectedPool === 1
+    ? [
+        ...pool2Farmers.map(f => ({ lat: f.lat, lng: f.lng, name: f.name, isHub: false, isUser: false })),
+        ...(userFarmer ? [{ lat: userFarmer.lat, lng: userFarmer.lng, name: `${userFarmer.name} (Ty)`, isUser: true, isHub: false }] : []),
+        { lat: 54.413333, lng: 18.479376, name: "Renk Gdańsk", isHub: true, isUser: false },
+      ]
+    : truckStops.map((s, i) => ({ lat: s.lat, lng: s.lng, name: s.name, isHub: i === truckStops.length - 1, isUser: i === 0 }));
+
+  const activeRoute = selectedPool === 0
+    ? (animStep >= 2 ? pool1Route : undefined)
+    : selectedPool === 1
+    ? [...pool2Farmers.map(f => ({ lat: f.lat, lng: f.lng })), { lat: 54.413333, lng: 18.479376 }]
+    : truckStops.map(s => ({ lat: s.lat, lng: s.lng }));
 
   function nextMonday(): string {
     const d = new Date();
@@ -587,7 +609,7 @@ export default function App() {
     return (
       <div style={{ height: "100vh", position: "relative", overflow: "hidden" }}>
         {/* Map — always full width */}
-        <Map points={mapPoints} route={animStep >= 2 ? orderedRoute : undefined} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} />
+        <Map key={`act3-pool${selectedPool}`} points={activeMapPoints} route={activeRoute} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} fitPadding={isMobile ? { top: 48, right: 48, bottom: Math.round(typeof window !== "undefined" ? window.innerHeight * 0.65 : 400), left: 48 } : { top: 48, right: 48 + 360, bottom: 48, left: 48 }} />
 
         {/* Top-left logo */}
         <div style={{ position: "absolute", top: "1rem", left: "1rem", zIndex: 500, background: "rgba(255,253,247,0.92)", border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.4rem 0.875rem", display: "flex", alignItems: "center", gap: "0.4rem", backdropFilter: "blur(6px)" }}>
@@ -607,7 +629,7 @@ export default function App() {
   return (
     <div style={{ height: "100dvh", position: "relative", overflow: "hidden" }}>
       <div style={{ position: "absolute", inset: 0 }}>
-        <Map points={mapPoints} route={animStep >= 2 ? orderedRoute : undefined} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} />
+        <Map key={`act3-pool${selectedPool}`} points={activeMapPoints} route={activeRoute} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} fitPadding={isMobile ? { top: 48, right: 48, bottom: Math.round(typeof window !== "undefined" ? window.innerHeight * 0.65 : 400), left: 48 } : { top: 48, right: 48 + 360, bottom: 48, left: 48 }} />
       </div>
 
       {/* Top bar */}
