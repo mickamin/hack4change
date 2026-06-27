@@ -140,11 +140,17 @@ export default function Map({ points, focusPoint, route, fitPadding }: MapProps)
     const blue = L.polyline(latLngs, { color: "#1a6fc4", weight: 6, opacity: 1, lineJoin: "round" }).addTo(map);
     const dash = L.polyline(latLngs, { color: "#fff", weight: 2, dashArray: "12, 10", opacity: 0.7, lineJoin: "round" }).addTo(map);
 
-    // Fit to explicit waypoints (guaranteed to include both endpoints)
+    // Fit to explicit waypoints — fitBounds with per-side padding correctly handles
+    // the mobile case where a bottom panel covers part of the map container.
     const waypointBounds = L.latLngBounds(pts.map(p => [p.lat, p.lng] as [number, number]));
-    const p = fitPadding ?? { top: 48, right: 48, bottom: 48, left: 48 };
-    const zoom = map.getBoundsZoom(waypointBounds, false, [p.left + p.right, p.top + p.bottom]);
-    map.setView(waypointBounds.getCenter(), Math.max(zoom - 1, 8), { animate: true, duration: 1.0 });
+    const pad = fitPadding ?? { top: 48, right: 48, bottom: 48, left: 48 };
+    map.fitBounds(waypointBounds, {
+      paddingTopLeft: [pad.left, pad.top],
+      paddingBottomRight: [pad.right, pad.bottom],
+      animate: true,
+      duration: 1.0,
+      maxZoom: 14,
+    });
 
     // Animate both layers via stroke-dashoffset
     [blue, dash].forEach(poly => {

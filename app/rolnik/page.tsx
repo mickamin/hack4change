@@ -515,13 +515,17 @@ export default function App() {
             <span style={{ fontSize: "0.7rem", fontWeight: 900, color: "#fff" }}>{creator.name.charAt(0)}</span>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: T.text }}>{creator.name}</div>
+            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: T.text }}>{creator.name.split(" ")[0]}</div>
             <div style={{ fontSize: "0.68rem", color: T.subtle }}>Założył pulę</div>
           </div>
-          <a href={`tel:${creator.phone.replace(/\s/g, "")}`}
-            style={{ display: "flex", alignItems: "center", gap: "0.3rem", padding: "0.375rem 0.75rem", background: T.accent, color: "#fff", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, textDecoration: "none", flexShrink: 0 }}>
-            Zadzwoń
-          </a>
+          {joinedPool === 0 ? (
+            <a href={`tel:${creator.phone.replace(/\s/g, "")}`}
+              style={{ display: "flex", alignItems: "center", gap: "0.3rem", padding: "0.375rem 0.75rem", background: T.accent, color: "#fff", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, textDecoration: "none", flexShrink: 0 }}>
+              Zadzwoń
+            </a>
+          ) : (
+            <span style={{ fontSize: "0.68rem", color: T.subtle, fontStyle: "italic" }}>dołącz → kontakt</span>
+          )}
         </div>
       )}
       <CapacityBar current={poolPallets} max={TRUCK_CAPACITY} />
@@ -560,10 +564,14 @@ export default function App() {
           <span style={{ fontSize: "0.7rem", fontWeight: 900, color: "#fff" }}>R</span>
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: "0.75rem", fontWeight: 700, color: T.text }}>Ryszard Kaszubski</div>
+          <div style={{ fontSize: "0.75rem", fontWeight: 700, color: T.text }}>Ryszard</div>
           <div style={{ fontSize: "0.68rem", color: T.subtle }}>Założył pulę</div>
         </div>
-        <a href="tel:+48506111222" style={{ padding: "0.375rem 0.75rem", background: T.accent, color: "#fff", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, textDecoration: "none" }}>Zadzwoń</a>
+        {joinedPool === 1 ? (
+          <a href="tel:+48506111222" style={{ padding: "0.375rem 0.75rem", background: T.accent, color: "#fff", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, textDecoration: "none" }}>Zadzwoń</a>
+        ) : (
+          <span style={{ fontSize: "0.68rem", color: T.subtle, fontStyle: "italic" }}>dołącz → kontakt</span>
+        )}
       </div>
       <CapacityBar current={pool2Pallets} max={TRUCK_CAPACITY} />
       <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0.75rem 0 0.5rem" }}>
@@ -597,10 +605,16 @@ export default function App() {
       <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.875rem", background: "#fdf8f0", borderRadius: "0.875rem", border: `1px solid ${T.gold}44`, marginBottom: "0.875rem" }}>
         <span style={{ fontSize: "2rem" }}>🚛</span>
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 800, fontSize: "0.9rem", color: T.text }}>Trans-Kaszuby Sp. z o.o.</div>
-          <div style={{ fontSize: "0.72rem", color: T.muted }}>Kierowca: Tomasz Nowak · +48 512 333 444</div>
+          <div style={{ fontWeight: 800, fontSize: "0.9rem", color: T.text }}>Trans-Kaszuby</div>
+          {joinedPool === 2 ? (
+            <div style={{ fontSize: "0.72rem", color: T.muted }}>Kierowca: Tomasz · +48 512 333 444</div>
+          ) : (
+            <div style={{ fontSize: "0.72rem", color: T.subtle, fontStyle: "italic" }}>Dane kierowcy po dołączeniu</div>
+          )}
         </div>
-        <a href="tel:+48512333444" style={{ padding: "0.375rem 0.75rem", background: T.gold, color: "#fff", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, textDecoration: "none" }}>Zadzwoń</a>
+        {joinedPool === 2 && (
+          <a href="tel:+48512333444" style={{ padding: "0.375rem 0.75rem", background: T.gold, color: "#fff", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, textDecoration: "none" }}>Zadzwoń</a>
+        )}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "0.875rem" }}>
         <StatBox label="Trasa" value="Kartuzy → Gdańsk" />
@@ -781,12 +795,24 @@ export default function App() {
     </div>
   );
 
+  const mapFitPadding = isMobile
+    ? { top: 48, right: 48, bottom: Math.round(typeof window !== "undefined" ? window.innerHeight * 0.65 : 400), left: 48 }
+    : { top: 48, right: 48 + 360, bottom: 48, left: 48 };
+
+  const MapOrLock = joinedPool === null ? (
+    <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #d4e8c0 0%, #a8c87a 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem" }}>
+      <div style={{ fontSize: "2.5rem" }}>🔒</div>
+      <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "#2d5a1b", textAlign: "center", padding: "0 2rem" }}>Dołącz do puli, żeby zobaczyć trasę i lokalizacje</div>
+    </div>
+  ) : (
+    <Map key={`act3-pool${selectedPool}-${ownPoolDest ?? ""}`} points={activeMapPoints} route={activeRoute} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} fitPadding={mapFitPadding} />
+  );
+
   // Desktop: full-screen map + overlaid side panel
   if (!isMobile) {
     return (
       <div style={{ height: "100vh", position: "relative", overflow: "hidden" }}>
-        {/* Map — always full width */}
-        <Map key={`act3-pool${selectedPool}-${ownPoolDest ?? ""}`} points={activeMapPoints} route={activeRoute} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} fitPadding={isMobile ? { top: 48, right: 48, bottom: Math.round(typeof window !== "undefined" ? window.innerHeight * 0.65 : 400), left: 48 } : { top: 48, right: 48 + 360, bottom: 48, left: 48 }} />
+        {MapOrLock}
 
         {/* Bottom-left logo */}
         <div style={{ position: "absolute", bottom: "1rem", left: "1rem", zIndex: 500, background: "rgba(255,253,247,0.92)", border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.4rem 0.875rem", display: "flex", alignItems: "center", gap: "0.45rem", backdropFilter: "blur(6px)" }}>
@@ -804,11 +830,30 @@ export default function App() {
     );
   }
 
-  // Mobile: full-screen map + bottom sheet
+  // Mobile: before joining — panel fills full screen; after joining — map on top, panel 65dvh bottom sheet
+  if (joinedPool === null) {
+    return (
+      <div style={{ height: "100dvh", display: "flex", flexDirection: "column", overflow: "hidden", background: T.bg }}>
+        {/* Top bar */}
+        <div style={{ padding: "0.875rem 1rem", display: "flex", alignItems: "center", gap: "0.5rem", background: T.card, borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
+          <img src="/agropool-logo.svg" alt="" width={22} height={22} />
+          <span style={{ fontFamily: "var(--font-league-spartan), sans-serif", fontWeight: 700, fontSize: "1.05rem" }}>
+            <span style={{ color: T.accentHi }}>Agro</span><span style={{ color: T.gold }}>Pool</span>
+          </span>
+        </div>
+        {/* Panel takes full remaining space */}
+        <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" }}>
+          {panelContent}
+        </div>
+      </div>
+    );
+  }
+
+  // After joining — map background + bottom sheet
   return (
     <div style={{ height: "100dvh", position: "relative", overflow: "hidden" }}>
       <div style={{ position: "absolute", inset: 0 }}>
-        <Map key={`act3-pool${selectedPool}-${ownPoolDest ?? ""}`} points={activeMapPoints} route={activeRoute} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} fitPadding={isMobile ? { top: 48, right: 48, bottom: Math.round(typeof window !== "undefined" ? window.innerHeight * 0.65 : 400), left: 48 } : { top: 48, right: 48 + 360, bottom: 48, left: 48 }} />
+        {MapOrLock}
       </div>
 
       {/* Top bar */}
