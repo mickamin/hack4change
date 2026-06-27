@@ -62,23 +62,31 @@ export default function Map({ points, isOnline, focusPoint, route }: MapProps) {
   }, []);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function fetchOsrmRoute(pts: Array<{ lat: number; lng: number }>): Promise<[number, number][]> {
+    const coords = pts.map(p => `${p.lng},${p.lat}`).join(";");
+    const res = await fetch(
+      `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`
+    );
+    const data = await res.json();
+    const geom = data.routes?.[0]?.geometry?.coordinates as [number, number][] | undefined;
+    if (!geom) return pts.map(p => [p.lat, p.lng]);
+    return geom.map(([lng, lat]) => [lat, lng]);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function drawRoute(L: any, map: any, latLngs: [number, number][]) {
+    L.polyline(latLngs, { color: "#000", weight: 7, opacity: 0.1, lineJoin: "round" }).addTo(map);
+    L.polyline(latLngs, { color: "#2d5a1b", weight: 5, opacity: 0.9, lineJoin: "round" }).addTo(map);
+    L.polyline(latLngs, { color: "#7bc64a", weight: 3, dashArray: "14, 10", opacity: 0.85, lineJoin: "round" }).addTo(map);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function renderPoints(L: any, map: any, pts: MapPoint[], routePts?: Array<{ lat: number; lng: number }>) {
-    // Draw route line first (below markers)
     const linePts = routePts && routePts.length > 1 ? routePts : pts.length > 1 ? pts : null;
     if (linePts) {
-      const latLngs = linePts.map((p) => [p.lat, p.lng] as [number, number]);
-      // Shadow line
-      L.polyline(latLngs, { color: "#000", weight: 7, opacity: 0.12, lineJoin: "round" }).addTo(map);
-      // Main route line
-      L.polyline(latLngs, { color: "#2d5a1b", weight: 4, opacity: 0.85, lineJoin: "round" }).addTo(map);
-      // Animated dash overlay
-      L.polyline(latLngs, {
-        color: "#7bc64a",
-        weight: 3,
-        dashArray: "14, 10",
-        opacity: 0.9,
-        lineJoin: "round",
-      }).addTo(map);
+      fetchOsrmRoute(linePts).then(latLngs => drawRoute(L, map, latLngs)).catch(() => {
+        drawRoute(L, map, linePts.map(p => [p.lat, p.lng]));
+      });
     }
 
     pts.forEach((pt) => {
