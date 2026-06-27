@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import type { OptimizeRouteResponse } from "@/app/api/optimize-route/route";
 import type { Farmer } from "@/app/api/data/mockData";
@@ -43,7 +44,7 @@ type Act = 1 | 2 | 3;
 export default function App() {
   const { isOnline, enqueue } = useOfflineSync();
   const [hydrated, setHydrated]         = useState(false);
-  const [act, setAct]                   = useState<Act>(1);
+  const [act, setAct]                   = useState<Act>(2);
   const [isMobile, setIsMobile]         = useState(true);
 
   // Act 2
@@ -292,7 +293,7 @@ export default function App() {
     return (
       <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", color: T.text }}>
         <div style={{ background: T.card, borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: "1rem", padding: "1rem 1.25rem", flexShrink: 0 }}>
-          <button onClick={() => setAct(1)} style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1 }}>←</button>
+          <Link href="/" style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1, textDecoration: "none" }}>←</Link>
           <div>
             <div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>
               {status === "joining" ? "Dołącz do puli" : "Zgłoś ładunek"}
