@@ -437,10 +437,20 @@ export default function App() {
     { lat: 54.413, lng: 18.479, name: "Cel: Renk Gdańsk" },
   ];
   const OWN_POOL_DESTS: Record<string, { lat: number; lng: number }> = {
-    "Renk Gdańsk":        { lat: 54.413333, lng: 18.479376 },
-    "Makro Gdańsk":       { lat: 54.404,    lng: 18.556 },
-    "Bronisze Warszawa":  { lat: 52.220,    lng: 20.817 },
-    "Kupiec Poznański":   { lat: 52.395,    lng: 16.927 },
+    "Renk Gdańsk":            { lat: 54.413333, lng: 18.479376 },
+    "Makro Gdańsk":           { lat: 54.404,    lng: 18.556 },
+    "Selgros Gdańsk":         { lat: 54.398,    lng: 18.521 },
+    "GPH Gdańsk":             { lat: 54.391,    lng: 18.497 },
+    "Giełda Tczew":           { lat: 53.778,    lng: 18.779 },
+    "Giełda Słupsk":          { lat: 54.464,    lng: 17.028 },
+    "Makro Gdynia":           { lat: 54.521,    lng: 18.531 },
+    "Bronisze Warszawa":      { lat: 52.220,    lng: 20.817 },
+    "Kupiec Poznański":       { lat: 52.395,    lng: 16.927 },
+    "Giełda Łódź":            { lat: 51.759,    lng: 19.455 },
+    "Makro Bydgoszcz":        { lat: 53.121,    lng: 18.003 },
+    "Terminal Gdańsk Port":   { lat: 54.416,    lng: 18.661 },
+    "Spedytor Niemcy":        { lat: 54.352,    lng: 18.646 },
+    "Spedytor Skandynawia":   { lat: 54.352,    lng: 18.646 },
   };
   const pool2Pallets = pool2Farmers.reduce((s, f) => s + f.pallets, 0) + userTotalPallets;
   const pool2Pct = Math.min(100, Math.round((pool2Pallets / TRUCK_CAPACITY) * 100));
@@ -633,14 +643,32 @@ export default function App() {
           </div>
           {/* Destination picker */}
           <div style={{ fontSize: "0.72rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.4rem" }}>Dokąd?</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", marginBottom: "0.875rem" }}>
-            {Object.keys(OWN_POOL_DESTS).map(dest => (
-              <button key={dest} type="button" onClick={() => setOwnPoolDest(dest)}
-                style={{ padding: "0.625rem 0.875rem", borderRadius: "0.75rem", border: `1.5px solid ${ownPoolDest === dest ? T.accent : T.border}`, background: ownPoolDest === dest ? "#f0faeb" : T.surface, color: ownPoolDest === dest ? T.accent : T.text, fontWeight: ownPoolDest === dest ? 700 : 500, fontSize: "0.875rem", cursor: "pointer", textAlign: "left", touchAction: "manipulation" }}>
-                {dest}
-              </button>
-            ))}
-          </div>
+          <select value={ownPoolDest ?? ""} onChange={e => setOwnPoolDest(e.target.value || null)}
+            style={{ width: "100%", background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.875rem", color: ownPoolDest ? T.text : T.subtle, padding: "0.875rem 2.5rem 0.875rem 1rem", fontSize: "1rem", outline: "none", boxSizing: "border-box" as const, appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a6a48' strokeWidth='1.5' fill='none' strokeLinecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 1rem center", marginBottom: "0.875rem" }}>
+            <option value="">— wybierz rynek docelowy —</option>
+            <optgroup label="Trójmiasto">
+              <option value="Renk Gdańsk">Renk Gdańsk (ul. Wodnika 50)</option>
+              <option value="Makro Gdańsk">Makro Cash&amp;Carry Gdańsk</option>
+              <option value="Selgros Gdańsk">Selgros Gdańsk</option>
+              <option value="GPH Gdańsk">Giełda Płodów Rolnych Gdańsk</option>
+            </optgroup>
+            <optgroup label="Pomorze">
+              <option value="Giełda Tczew">Giełda Rolna Tczew</option>
+              <option value="Giełda Słupsk">Giełda Rolna Słupsk</option>
+              <option value="Makro Gdynia">Makro Cash&amp;Carry Gdynia</option>
+            </optgroup>
+            <optgroup label="Reszta Polski">
+              <option value="Bronisze Warszawa">Bronisze Warszawa (największa giełda PL)</option>
+              <option value="Kupiec Poznański">Kupiec Poznański</option>
+              <option value="Giełda Łódź">Giełda Rolno-Ogrodnicza Łódź</option>
+              <option value="Makro Bydgoszcz">Makro Cash&amp;Carry Bydgoszcz</option>
+            </optgroup>
+            <optgroup label="Eksport">
+              <option value="Terminal Gdańsk Port">Terminal Chłodniczy Gdańsk Port</option>
+              <option value="Spedytor Niemcy">Spedytor — kierunek Niemcy</option>
+              <option value="Spedytor Skandynawia">Spedytor — kierunek Skandynawia</option>
+            </optgroup>
+          </select>
           {/* Date */}
           <div style={{ fontSize: "0.72rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.4rem" }}>Kiedy?</div>
           <input type="date" value={ownPoolDate} onChange={e => setOwnPoolDate(e.target.value)}
@@ -758,7 +786,7 @@ export default function App() {
     return (
       <div style={{ height: "100vh", position: "relative", overflow: "hidden" }}>
         {/* Map — always full width */}
-        <Map key={`act3-pool${selectedPool}`} points={activeMapPoints} route={activeRoute} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} fitPadding={isMobile ? { top: 48, right: 48, bottom: Math.round(typeof window !== "undefined" ? window.innerHeight * 0.65 : 400), left: 48 } : { top: 48, right: 48 + 360, bottom: 48, left: 48 }} />
+        <Map key={`act3-pool${selectedPool}-${ownPoolDest ?? ""}`} points={activeMapPoints} route={activeRoute} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} fitPadding={isMobile ? { top: 48, right: 48, bottom: Math.round(typeof window !== "undefined" ? window.innerHeight * 0.65 : 400), left: 48 } : { top: 48, right: 48 + 360, bottom: 48, left: 48 }} />
 
         {/* Top-left logo */}
         <div style={{ position: "absolute", top: "1rem", left: "1rem", zIndex: 500, background: "rgba(255,253,247,0.92)", border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.4rem 0.875rem", display: "flex", alignItems: "center", gap: "0.4rem", backdropFilter: "blur(6px)" }}>
@@ -778,7 +806,7 @@ export default function App() {
   return (
     <div style={{ height: "100dvh", position: "relative", overflow: "hidden" }}>
       <div style={{ position: "absolute", inset: 0 }}>
-        <Map key={`act3-pool${selectedPool}`} points={activeMapPoints} route={activeRoute} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} fitPadding={isMobile ? { top: 48, right: 48, bottom: Math.round(typeof window !== "undefined" ? window.innerHeight * 0.65 : 400), left: 48 } : { top: 48, right: 48 + 360, bottom: 48, left: 48 }} />
+        <Map key={`act3-pool${selectedPool}-${ownPoolDest ?? ""}`} points={activeMapPoints} route={activeRoute} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} fitPadding={isMobile ? { top: 48, right: 48, bottom: Math.round(typeof window !== "undefined" ? window.innerHeight * 0.65 : 400), left: 48 } : { top: 48, right: 48 + 360, bottom: 48, left: 48 }} />
       </div>
 
       {/* Top bar */}

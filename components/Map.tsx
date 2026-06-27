@@ -127,10 +127,12 @@ export default function Map({ points, isOnline, focusPoint, route, fitPadding }:
     let latLngs: [number, number][];
     try {
       const coords = pts.map(p => `${p.lng},${p.lat}`).join(";");
-      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
+      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&continue_straight=false`);
       const data = await res.json();
       const geom = data.routes?.[0]?.geometry?.coordinates as [number, number][] | undefined;
       latLngs = geom ? geom.map(([lng, lat]) => [lat, lng]) : pts.map(p => [p.lat, p.lng]);
+      // Ensure route starts at first waypoint and ends at last (OSRM may snap to nearest road)
+      latLngs = [[pts[0].lat, pts[0].lng], ...latLngs.slice(1, -1), [pts[pts.length - 1].lat, pts[pts.length - 1].lng]];
     } catch {
       latLngs = pts.map(p => [p.lat, p.lng]);
     }
@@ -139,15 +141,11 @@ export default function Map({ points, isOnline, focusPoint, route, fitPadding }:
     const blue = L.polyline(latLngs, { color: "#1a6fc4", weight: 6, opacity: 1, lineJoin: "round" }).addTo(map);
     const dash = L.polyline(latLngs, { color: "#fff", weight: 2, dashArray: "12, 10", opacity: 0.7, lineJoin: "round" }).addTo(map);
 
-    // Fit map to show full route, respecting panel offsets
-    const bounds = L.latLngBounds(latLngs);
+    // Fit to explicit waypoints (guaranteed to include both endpoints)
+    const waypointBounds = L.latLngBounds(pts.map(p => [p.lat, p.lng] as [number, number]));
     const p = fitPadding ?? { top: 48, right: 48, bottom: 48, left: 48 };
-    map.fitBounds(bounds, {
-      paddingTopLeft: [p.left, p.top],
-      paddingBottomRight: [p.right, p.bottom],
-      animate: true,
-      duration: 1.0,
-    });
+    const zoom = map.getBoundsZoom(waypointBounds, false, [p.left + p.right, p.top + p.bottom]);
+    map.setView(waypointBounds.getCenter(), Math.max(zoom - 1, 8), { animate: true, duration: 1.0 });
 
     // Animate both layers via stroke-dashoffset
     [blue, dash].forEach(poly => {
