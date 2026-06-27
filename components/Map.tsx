@@ -76,8 +76,22 @@ export default function Map({ points, isOnline, focusPoint, route }: MapProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function drawRoute(L: any, map: any, latLngs: [number, number][]) {
     L.polyline(latLngs, { color: "#000", weight: 7, opacity: 0.1, lineJoin: "round" }).addTo(map);
-    L.polyline(latLngs, { color: "#2d5a1b", weight: 5, opacity: 0.9, lineJoin: "round" }).addTo(map);
+    const main = L.polyline(latLngs, { color: "#2d5a1b", weight: 5, opacity: 0.9, lineJoin: "round" }).addTo(map);
     L.polyline(latLngs, { color: "#7bc64a", weight: 3, dashArray: "14, 10", opacity: 0.85, lineJoin: "round" }).addTo(map);
+
+    // Animate route drawing via stroke-dashoffset
+    requestAnimationFrame(() => {
+      const el = main.getElement() as SVGPathElement | null;
+      if (!el) return;
+      const len = el.getTotalLength();
+      el.style.strokeDasharray = String(len);
+      el.style.strokeDashoffset = String(len);
+      el.style.transition = "none";
+      requestAnimationFrame(() => {
+        el.style.transition = "stroke-dashoffset 2s ease-in-out";
+        el.style.strokeDashoffset = "0";
+      });
+    });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

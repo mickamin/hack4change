@@ -460,22 +460,21 @@ export default function App() {
     </div>
   );
 
-  // Desktop: side panel | Mobile: bottom sheet
+  // Desktop: full-screen map + overlaid side panel
   if (!isMobile) {
     return (
-      <div style={{ height: "100vh", display: "flex", overflow: "hidden" }}>
-        {/* Map */}
-        <div style={{ flex: 1, position: "relative" }}>
-          <Map points={mapPoints} route={orderedRoute} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} />
-          {/* Top-left logo */}
-          <div style={{ position: "absolute", top: "1rem", left: "1rem", zIndex: 500, background: "rgba(255,253,247,0.92)", border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.4rem 0.875rem", display: "flex", alignItems: "center", gap: "0.4rem", backdropFilter: "blur(6px)" }}>
-            <span>🌾</span>
-            <span style={{ fontWeight: 900, fontSize: "0.9rem", color: T.accentHi }}>AgroPool</span>
-          </div>
+      <div style={{ height: "100vh", position: "relative", overflow: "hidden" }}>
+        {/* Map — always full width */}
+        <Map points={mapPoints} route={orderedRoute} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} />
+
+        {/* Top-left logo */}
+        <div style={{ position: "absolute", top: "1rem", left: "1rem", zIndex: 500, background: "rgba(255,253,247,0.92)", border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.4rem 0.875rem", display: "flex", alignItems: "center", gap: "0.4rem", backdropFilter: "blur(6px)" }}>
+          <span>🌾</span>
+          <span style={{ fontWeight: 900, fontSize: "0.9rem", color: T.accentHi }}>AgroPool</span>
         </div>
 
-        {/* Side panel */}
-        <div style={{ width: "340px", flexShrink: 0, background: T.card, borderLeft: `1px solid ${T.border}`, display: "flex", flexDirection: "column", transform: showPanel ? "translateX(0)" : "translateX(100%)", transition: "transform 0.5s cubic-bezier(0.34,1.2,0.64,1)" }}>
+        {/* Side panel — slides in from right, overlays map */}
+        <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "360px", zIndex: 500, background: T.card, borderLeft: `1px solid ${T.border}`, display: "flex", flexDirection: "column", transform: showPanel ? "translateX(0)" : "translateX(100%)", transition: "transform 0.5s cubic-bezier(0.34,1.2,0.64,1)", boxShadow: "-8px 0 32px rgba(0,0,0,0.12)" }}>
           {panelContent}
         </div>
       </div>
