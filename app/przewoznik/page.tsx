@@ -108,6 +108,8 @@ export default function PrzewoznikPage() {
   const [carrierName, setCarrierName] = useState("");
   const [date, setDate] = useState("");
   const [capacity, setCapacity] = useState(12);
+  const [pricePerPallet, setPricePerPallet] = useState(50);
+  const [pricePerKg, setPricePerKg] = useState(0.15);
 
   type Unit = "palety" | "kg";
   interface SelectedCrop { name: string; qty: number; unit: Unit }
@@ -276,7 +278,25 @@ export default function PrzewoznikPage() {
             </div>
           </section>
 
-          {/* Crop picker — identical to rolnik "Co zbierasz?" */}
+          <section>
+            <Label>Cennik przewozu</Label>
+            <div style={{ display: "flex", gap: "0.75rem" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "0.7rem", color: T.muted, marginBottom: "0.3rem" }}>Za palete (zl)</div>
+                <input type="number" value={pricePerPallet} min={0} step={5}
+                  onChange={(e) => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0) setPricePerPallet(v); }}
+                  style={{ ...inputBase, textAlign: "center", fontSize: "1.1rem", fontWeight: 700 }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "0.7rem", color: T.muted, marginBottom: "0.3rem" }}>Za kg (zl)</div>
+                <input type="number" value={pricePerKg} min={0} step={0.01}
+                  onChange={(e) => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0) setPricePerKg(v); }}
+                  style={{ ...inputBase, textAlign: "center", fontSize: "1.1rem", fontWeight: 700 }} />
+              </div>
+            </div>
+          </section>
+
+          {/* Crop picker */}
           <section>
             <Label>Co moge zabrac</Label>
             <input
@@ -434,8 +454,8 @@ export default function PrzewoznikPage() {
                   <div style={{ fontSize: "0.72rem", color: T.subtle }}>{m.farmer.crop} - +{m.detourKm} km od trasy</div>
                 </div>
                 <div style={{ flexShrink: 0, textAlign: "right" }}>
-                  <div style={{ fontWeight: 900, fontSize: "0.95rem", color: T.accent, fontVariantNumeric: "tabular-nums" }}>{m.farmer.pallets}</div>
-                  <div style={{ fontSize: "0.6rem", color: T.subtle }}>pal.</div>
+                  <div style={{ fontWeight: 900, fontSize: "0.95rem", color: T.accent, fontVariantNumeric: "tabular-nums" }}>{m.farmer.pallets} pal.</div>
+                  <div style={{ fontSize: "0.7rem", color: T.gold, fontWeight: 700 }}>{(m.farmer.pallets * pricePerPallet).toLocaleString("pl-PL")} zl</div>
                 </div>
               </div>
             ))}
@@ -444,7 +464,8 @@ export default function PrzewoznikPage() {
               <div style={{ fontSize: "0.8rem", fontWeight: 800, color: T.accent, marginBottom: "0.625rem" }}>
                 Pusty kurs zamieniony w {filteredPallets} palet ladunku
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
+                <StatBox label="Twoj zarobek" value={`${(filteredPallets * pricePerPallet).toLocaleString("pl-PL")} zl`} />
                 <StatBox label="CO2 zaoszczedzone" value={`${r.co2SavedKg} kg`} />
                 <StatBox label="Wartosc ladunku" value={`${r.cargoValuePln.toLocaleString("pl-PL")} zl`} />
               </div>
