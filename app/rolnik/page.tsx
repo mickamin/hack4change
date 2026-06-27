@@ -232,10 +232,11 @@ export default function App() {
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(250,247,240,0.1) 0%, rgba(250,247,240,0.88) 50%, rgba(250,247,240,1) 100%)" }} />
 
         <div style={{ position: "relative", zIndex: 2, maxWidth: "440px", width: "100%", padding: "1.5rem", textAlign: "center", marginTop: "auto" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", background: T.card, border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.3rem 0.9rem", marginBottom: "1.5rem" }}>
-            <span style={{ fontSize: "1rem" }}>🌾</span>
-            <span style={{ fontWeight: 800, fontSize: "0.85rem", color: T.accentHi }}>AgroPool</span>
-            <span style={{ fontSize: "0.65rem", color: T.subtle }}>· Powiat Kartuski</span>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", background: T.card, border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.3rem 0.9rem", marginBottom: "1.5rem" }}>
+            <img src="/agropool-logo.svg" alt="" width={20} height={20} />
+            <span style={{ fontFamily: "var(--font-league-spartan), sans-serif", fontWeight: 700, fontSize: "0.95rem", textTransform: "uppercase", letterSpacing: "0.01em" }}>
+              <span style={{ color: "#396a1b" }}>Agro</span><span style={{ color: "#f29509" }}>Pool</span>
+            </span>
           </div>
 
           <h1 style={{ fontSize: "clamp(1.6rem, 6vw, 2.2rem)", fontWeight: 900, color: T.text, lineHeight: 1.2, letterSpacing: "-0.02em", margin: "0 0 1rem" }}>
@@ -788,9 +789,11 @@ export default function App() {
         <Map key={`act3-pool${selectedPool}-${ownPoolDest ?? ""}`} points={activeMapPoints} route={activeRoute} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} fitPadding={isMobile ? { top: 48, right: 48, bottom: Math.round(typeof window !== "undefined" ? window.innerHeight * 0.65 : 400), left: 48 } : { top: 48, right: 48 + 360, bottom: 48, left: 48 }} />
 
         {/* Top-left logo */}
-        <div style={{ position: "absolute", top: "1rem", left: "1rem", zIndex: 500, background: "rgba(255,253,247,0.92)", border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.4rem 0.875rem", display: "flex", alignItems: "center", gap: "0.4rem", backdropFilter: "blur(6px)" }}>
-          <span>🌾</span>
-          <span style={{ fontWeight: 900, fontSize: "0.9rem", color: T.accentHi }}>AgroPool</span>
+        <div style={{ position: "absolute", top: "1rem", left: "1rem", zIndex: 500, background: "rgba(255,253,247,0.92)", border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.4rem 0.875rem", display: "flex", alignItems: "center", gap: "0.45rem", backdropFilter: "blur(6px)" }}>
+          <img src="/agropool-logo.svg" alt="" width={22} height={22} />
+          <span style={{ fontFamily: "var(--font-league-spartan), sans-serif", fontWeight: 700, fontSize: "1rem", textTransform: "uppercase", letterSpacing: "0.01em" }}>
+            <span style={{ color: "#396a1b" }}>Agro</span><span style={{ color: "#f29509" }}>Pool</span>
+          </span>
         </div>
 
         {/* Side panel — slides in from right, overlays map */}
@@ -810,7 +813,12 @@ export default function App() {
 
       {/* Top bar */}
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 500, padding: "0.875rem 1rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "linear-gradient(to bottom, rgba(26,46,10,0.8) 0%, transparent 100%)" }}>
-        <span style={{ fontWeight: 900, fontSize: "1rem", color: "#e8f0d8" }}>🌾 AgroPool</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}>
+          <img src="/agropool-logo.svg" alt="" width={22} height={22} />
+          <span style={{ fontFamily: "var(--font-league-spartan), sans-serif", fontWeight: 700, fontSize: "1.05rem", textTransform: "uppercase", letterSpacing: "0.01em" }}>
+            <span style={{ color: "#e8f0d8" }}>Agro</span><span style={{ color: "#f29509" }}>Pool</span>
+          </span>
+        </span>
       </div>
 
       {/* Bottom sheet */}
