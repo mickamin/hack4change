@@ -164,7 +164,10 @@ export default function App() {
   ];
 
   const metrics = routeData?.metrics;
-  const poolPallets = (visibleFarmers.reduce((s, f) => s + f.pallets, 0)) + (userFarmer?.pallets ?? 0);
+  const userTotalPallets = cropEntries.length > 0
+    ? cropEntries.reduce((s, e) => s + e.pallets, 0)
+    : (userFarmer?.pallets ?? 0);
+  const poolPallets = visibleFarmers.reduce((s, f) => s + f.pallets, 0) + userTotalPallets;
   const poolPct = Math.min(100, Math.round((poolPallets / TRUCK_CAPACITY) * 100));
 
   if (!hydrated) return <BootScreen />;
@@ -400,9 +403,14 @@ export default function App() {
           W puli ({visibleFarmers.length + (userFarmer ? 1 : 0)} rolników)
         </div>
 
-        {userFarmer && (
-          <FarmerRow name={userFarmer.name} crop={userFarmer.crop} pallets={userFarmer.pallets} isUser />
-        )}
+        {userFarmer && cropEntries.length > 0
+          ? cropEntries.map(e => (
+              <FarmerRow key={e.crop} name={userFarmer.name} crop={e.crop} pallets={e.pallets} isUser />
+            ))
+          : userFarmer && (
+              <FarmerRow name={userFarmer.name} crop={userFarmer.crop} pallets={userFarmer.pallets} isUser />
+            )
+        }
         {visibleFarmers.map(f => (
           <FarmerRow key={f.id} name={f.name} crop={f.crop} pallets={f.pallets} />
         ))}

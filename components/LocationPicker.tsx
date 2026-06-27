@@ -39,9 +39,9 @@ export default function LocationPicker({ defaultLat, defaultLng, onPick }: Props
 
       const icon = L.divIcon({
         className: "",
-        html: `<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;background:#2d5a1b;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4);transform:rotate(-45deg);margin-top:-24px;margin-left:-14px"></div>`,
-        iconSize: [28, 28],
-        iconAnchor: [14, 28],
+        html: `<div style="width:24px;height:24px;border-radius:50% 50% 50% 0;background:#2d5a1b;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4);transform:rotate(-45deg)"></div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 24],
       });
 
       const marker = L.marker([defaultLat, defaultLng], { icon, draggable: true }).addTo(map);
