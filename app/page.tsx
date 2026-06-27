@@ -171,8 +171,14 @@ export default function App() {
   const userEarningsPln = cropEntries.length > 0
     ? cropEntries.reduce((s, e) => s + e.pallets * (pricesMap[e.crop] ?? 500), 0)
     : userFarmer ? (userFarmer.pallets * (pricesMap[userFarmer.crop] ?? 500)) : 0;
-  const userSavingsPln = metrics && metrics.totalPallets > 0
-    ? Math.round(metrics.costSavedPln * (userTotalPallets / metrics.totalPallets))
+  const userTransportCostPln = metrics && metrics.totalPallets > 0
+    ? Math.round(metrics.costConsolidatedPln * (userTotalPallets / metrics.totalPallets))
+    : 0;
+  const costPerPalletPln = metrics && metrics.totalPallets > 0
+    ? Math.round(metrics.costConsolidatedPln / metrics.totalPallets)
+    : 0;
+  const userIndividualCostPln = metrics && metrics.totalPallets > 0
+    ? Math.round(metrics.costIndividualPln * (userTotalPallets / metrics.totalPallets))
     : 0;
   const userCo2SavedKg = metrics && metrics.totalPallets > 0
     ? Math.round(metrics.co2SavedKg * (userTotalPallets / metrics.totalPallets) * 10) / 10
@@ -496,7 +502,7 @@ export default function App() {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
             <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena rynkowa PL" accent />
-            <StatBox label="Oszczędzasz" value={`${userSavingsPln} zł`} sub="vs. własny transport" />
+            <StatBox label="Koszt frachtu" value={`${userTransportCostPln} zł`} sub={`${costPerPalletPln} zł/pal · vs ~${userIndividualCostPln} zł sam`} />
             <StatBox label="CO₂ mniej" value={`${userCo2SavedKg} kg`} sub="Twój udział" />
           </div>
         </div>
@@ -529,7 +535,7 @@ export default function App() {
         <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Twój rachunek</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
           <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena rynkowa PL" accent />
-          <StatBox label="Oszczędzasz" value={`~${Math.round(userSavingsPln * 0.85)} zł`} sub="vs. własny transport" />
+          <StatBox label="Koszt frachtu" value={`~${Math.round(userTransportCostPln * 0.85)} zł`} sub={`~${Math.round(costPerPalletPln * 0.85)} zł/pal · vs ~${userIndividualCostPln} zł sam`} />
           <StatBox label="CO₂ mniej" value={`~${Math.round(userCo2SavedKg * 0.85)} kg`} sub="Twój udział" />
         </div>
       </div>
@@ -560,7 +566,7 @@ export default function App() {
         <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Twój rachunek</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
           <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena rynkowa PL" accent />
-          <StatBox label="Oszczędzasz" value={`~${Math.round(userSavingsPln * 0.9)} zł`} sub="kurs powrotny" />
+          <StatBox label="Koszt frachtu" value={`~${Math.round(userTransportCostPln * 0.9)} zł`} sub={`~${Math.round(costPerPalletPln * 0.9)} zł/pal · kurs powrotny`} />
           <StatBox label="CO₂ mniej" value={`~${Math.round(userCo2SavedKg * 1.2)} kg`} sub="kurs powrotny" />
         </div>
       </div>
