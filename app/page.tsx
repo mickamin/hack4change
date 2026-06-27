@@ -31,7 +31,9 @@ export default function HomePage() {
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <Link href="/rolnik" style={{ textDecoration: "none" }}>
             <div style={{ background: T.accent, color: "#fff", borderRadius: "1.25rem", padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", gap: "1rem", boxShadow: `0 6px 20px ${T.accent}44`, textAlign: "left" }}>
-              <span style={{ fontSize: "2rem" }}>🔱</span>
+              <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M32 58V22M32 22L22 8M32 22L42 8M32 22L32 8" stroke="white" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
               <span>
                 <span style={{ display: "block", fontSize: "1.15rem", fontWeight: 900 }}>Jestem rolnikiem</span>
                 <span style={{ display: "block", fontSize: "0.8rem", opacity: 0.9 }}>Mam nadwyżkę plonów do oddania</span>
