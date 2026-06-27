@@ -788,8 +788,8 @@ export default function App() {
         {/* Map — always full width */}
         <Map key={`act3-pool${selectedPool}-${ownPoolDest ?? ""}`} points={activeMapPoints} route={activeRoute} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} fitPadding={isMobile ? { top: 48, right: 48, bottom: Math.round(typeof window !== "undefined" ? window.innerHeight * 0.65 : 400), left: 48 } : { top: 48, right: 48 + 360, bottom: 48, left: 48 }} />
 
-        {/* Top-left logo */}
-        <div style={{ position: "absolute", top: "1rem", left: "1rem", zIndex: 500, background: "rgba(255,253,247,0.92)", border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.4rem 0.875rem", display: "flex", alignItems: "center", gap: "0.45rem", backdropFilter: "blur(6px)" }}>
+        {/* Bottom-left logo */}
+        <div style={{ position: "absolute", bottom: "1rem", left: "1rem", zIndex: 500, background: "rgba(255,253,247,0.92)", border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.4rem 0.875rem", display: "flex", alignItems: "center", gap: "0.45rem", backdropFilter: "blur(6px)" }}>
           <img src="/agropool-logo.svg" alt="" width={22} height={22} />
           <span style={{ fontFamily: "var(--font-league-spartan), sans-serif", fontWeight: 700, fontSize: "1rem", letterSpacing: "0.01em" }}>
             <span style={{ color: "#396a1b" }}>Agro</span><span style={{ color: "#f29509" }}>Pool</span>

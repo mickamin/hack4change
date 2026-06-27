@@ -254,6 +254,12 @@ export default function DystrybutorPage() {
 
       <div style={{ height: "44dvh", minHeight: "260px", position: "relative" }}>
         <Map points={mapPoints} route={routePts} focusPoint={nearPoint} />
+        <div style={{ position: "absolute", bottom: "0.75rem", left: "0.75rem", zIndex: 500, background: "rgba(255,253,247,0.92)", border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.35rem 0.75rem", display: "flex", alignItems: "center", gap: "0.4rem", backdropFilter: "blur(6px)", pointerEvents: "none" }}>
+          <img src="/agropool-logo.svg" alt="" width={20} height={20} />
+          <span style={{ fontFamily: "var(--font-league-spartan), sans-serif", fontWeight: 700, fontSize: "0.9rem", letterSpacing: "0.01em" }}>
+            <span style={{ color: "#396a1b" }}>Agro</span><span style={{ color: "#f29509" }}>Pool</span>
+          </span>
+        </div>
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "1rem 1.25rem", maxWidth: "560px", width: "100%", margin: "0 auto" }}>
