@@ -53,11 +53,11 @@ export default function HomePage() {
             </div>
           </Link>
 
-          <Link href="/dystrybutor" style={{ textDecoration: "none" }}>
+          <Link href="/odbiorca" style={{ textDecoration: "none" }}>
             <div style={{ background: T.card, color: T.text, border: `2px solid ${T.accentHi}`, borderRadius: "1.25rem", padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", gap: "1rem", textAlign: "left" }}>
               <span style={{ fontSize: "2rem" }}>📦</span>
               <span>
-                <span style={{ display: "block", fontSize: "1.15rem", fontWeight: 900, color: T.accentHi }}>Jestem dystrybutorem</span>
+                <span style={{ display: "block", fontSize: "1.15rem", fontWeight: 900, color: T.accentHi }}>Jestem odbiorcą</span>
                 <span style={{ display: "block", fontSize: "0.8rem", color: T.muted }}>Chcę odebrać nadwyżki hurtem</span>
               </span>
               <span style={{ marginLeft: "auto", fontSize: "1.4rem", color: T.accentHi, opacity: 0.8 }}>→</span>

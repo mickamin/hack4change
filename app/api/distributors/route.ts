@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   }
 
   const demand: DistributorDemand = {
-    distributorName: body.distributorName?.trim() || "Dystrybutor",
+    distributorName: body.distributorName?.trim() || "Odbiorca",
     crop: body.crop,
     neededPallets: body.neededPallets,
     near: body.near,

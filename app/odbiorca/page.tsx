@@ -117,7 +117,7 @@ export default function DystrybutorPage() {
             Szukasz towaru hurtowo?<br /><span style={{ color: T.accentHi }}>Zbierz nadwyżki z regionu.</span>
           </h1>
           <button onClick={() => setAct(2)} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.1rem 2.5rem", fontSize: "1.15rem", fontWeight: 900, cursor: "pointer", width: "100%", boxShadow: `0 6px 20px ${T.accent}55` }}>
-            Jestem dystrybutorem
+            Jestem odbiorcą
           </button>
         </div>
       </div>

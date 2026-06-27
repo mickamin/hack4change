@@ -483,11 +483,11 @@ export default function PrzewoznikPage() {
           </>
         )}
 
-        {/* Dystrybutorzy szukający towaru */}
+        {/* Odbiorcy szukający towaru */}
         {r.distributorMatches.length > 0 && (
           <div style={{ marginTop: "1.25rem" }}>
             <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.gold, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
-              Dystrybutorzy szukający towaru ({r.distributorMatches.length})
+              Odbiorcy szukający towaru ({r.distributorMatches.length})
             </div>
             {r.distributorMatches.map((dm) => (
               <div key={dm.distributor.id} style={{ display: "flex", alignItems: "center", padding: "0.6rem 0", borderBottom: `1px solid ${T.border}`, gap: "0.7rem" }}>
