@@ -69,6 +69,8 @@ export default function App() {
   const [selectedPool, setSelectedPool] = useState<0|1|2|3>(0);
   // null = not joined yet; 0=pula1, 1=pula2, 2=ciezarowka, 'own'=stworzona wlasna
   const [joinedPool, setJoinedPool]     = useState<0|1|2|"own"|null>(null);
+  const [ownPoolDest, setOwnPoolDest]   = useState<string | null>(null);
+  const [ownPoolDate, setOwnPoolDate]   = useState("");
 
   useEffect(() => {
     setHydrated(true);
@@ -434,6 +436,12 @@ export default function App() {
     { lat: 54.328, lng: 18.154, name: "Odbiór: Kartuzy · 2 pal." },
     { lat: 54.413, lng: 18.479, name: "Cel: Renk Gdańsk" },
   ];
+  const OWN_POOL_DESTS: Record<string, { lat: number; lng: number }> = {
+    "Renk Gdańsk":        { lat: 54.413333, lng: 18.479376 },
+    "Makro Gdańsk":       { lat: 54.404,    lng: 18.556 },
+    "Bronisze Warszawa":  { lat: 52.220,    lng: 20.817 },
+    "Kupiec Poznański":   { lat: 52.395,    lng: 16.927 },
+  };
   const pool2Pallets = pool2Farmers.reduce((s, f) => s + f.pallets, 0) + userTotalPallets;
   const pool2Pct = Math.min(100, Math.round((pool2Pallets / TRUCK_CAPACITY) * 100));
 
@@ -450,13 +458,22 @@ export default function App() {
         ...(userFarmer ? [{ lat: userFarmer.lat, lng: userFarmer.lng, name: `${userFarmer.name} (Ty)`, isUser: true, isHub: false }] : []),
         { lat: 54.413333, lng: 18.479376, name: "Renk Gdańsk", isHub: true, isUser: false },
       ]
-    : truckStops.map((s, i) => ({ lat: s.lat, lng: s.lng, name: s.name, isHub: i === truckStops.length - 1, isUser: i === 0 }));
+    : selectedPool === 2
+    ? truckStops.map((s, i) => ({ lat: s.lat, lng: s.lng, name: s.name, isHub: i === truckStops.length - 1, isUser: i === 0 }))
+    : [
+        ...(userFarmer ? [{ lat: userFarmer.lat, lng: userFarmer.lng, name: `${userFarmer.name} (Ty)`, isUser: true, isHub: false }] : []),
+        ...(ownPoolDest ? [{ lat: OWN_POOL_DESTS[ownPoolDest].lat, lng: OWN_POOL_DESTS[ownPoolDest].lng, name: ownPoolDest, isHub: true, isUser: false }] : []),
+      ];
 
   const activeRoute = selectedPool === 0
     ? (animStep >= 2 ? pool1Route : undefined)
     : selectedPool === 1
     ? [...pool2Farmers.map(f => ({ lat: f.lat, lng: f.lng })), { lat: 54.413333, lng: 18.479376 }]
-    : truckStops.map(s => ({ lat: s.lat, lng: s.lng }));
+    : selectedPool === 2
+    ? truckStops.map(s => ({ lat: s.lat, lng: s.lng }))
+    : (userFarmer && ownPoolDest
+        ? [{ lat: userFarmer.lat, lng: userFarmer.lng }, { lat: OWN_POOL_DESTS[ownPoolDest].lat, lng: OWN_POOL_DESTS[ownPoolDest].lng }]
+        : undefined);
 
   function nextMonday(): string {
     const d = new Date();
@@ -609,31 +626,46 @@ export default function App() {
   const PoolDetail3 = (
     <>
       {joinedPool !== "own" ? (
-        <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
-          <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>➕</div>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: T.text, marginBottom: "0.5rem" }}>Stwórz własną pulę</div>
-          <div style={{ fontSize: "0.85rem", color: T.muted, marginBottom: "1.25rem", lineHeight: 1.5 }}>
-            Będziesz założycielem puli. Inni rolnicy z okolicy mogą dołączyć.
+        <div style={{ padding: "0.5rem 0" }}>
+          <div style={{ fontWeight: 800, fontSize: "0.95rem", color: T.text, marginBottom: "0.25rem" }}>Stwórz własną pulę</div>
+          <div style={{ fontSize: "0.8rem", color: T.muted, marginBottom: "1rem", lineHeight: 1.5 }}>
+            Wybierz destynację i datę — będziesz założycielem.
           </div>
+          {/* Destination picker */}
+          <div style={{ fontSize: "0.72rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.4rem" }}>Dokąd?</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", marginBottom: "0.875rem" }}>
+            {Object.keys(OWN_POOL_DESTS).map(dest => (
+              <button key={dest} type="button" onClick={() => setOwnPoolDest(dest)}
+                style={{ padding: "0.625rem 0.875rem", borderRadius: "0.75rem", border: `1.5px solid ${ownPoolDest === dest ? T.accent : T.border}`, background: ownPoolDest === dest ? "#f0faeb" : T.surface, color: ownPoolDest === dest ? T.accent : T.text, fontWeight: ownPoolDest === dest ? 700 : 500, fontSize: "0.875rem", cursor: "pointer", textAlign: "left", touchAction: "manipulation" }}>
+                {dest}
+              </button>
+            ))}
+          </div>
+          {/* Date */}
+          <div style={{ fontSize: "0.72rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.4rem" }}>Kiedy?</div>
+          <input type="date" value={ownPoolDate} onChange={e => setOwnPoolDate(e.target.value)}
+            style={{ width: "100%", background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.875rem", color: T.text, padding: "0.75rem 1rem", fontSize: "1rem", outline: "none", boxSizing: "border-box" as const, marginBottom: "0.875rem" }} />
           {userFarmer ? (
-            <button onClick={() => { setJoinedPool("own"); }} style={{ width: "100%", padding: "0.875rem", borderRadius: "0.875rem", border: "none", background: T.accent, color: "#fff", fontWeight: 900, fontSize: "0.95rem", cursor: "pointer", touchAction: "manipulation" }}>
-              Stwórz pulę i zostań założycielem
+            <button onClick={() => setJoinedPool("own")} disabled={!ownPoolDest || !ownPoolDate}
+              style={{ width: "100%", padding: "0.875rem", borderRadius: "0.875rem", border: "none", background: ownPoolDest && ownPoolDate ? T.accent : T.border, color: "#fff", fontWeight: 900, fontSize: "0.95rem", cursor: ownPoolDest && ownPoolDate ? "pointer" : "not-allowed", touchAction: "manipulation" }}>
+              Stwórz pulę →
             </button>
           ) : (
-            <button onClick={() => { setAct(2); resetForm(); }} style={{ width: "100%", padding: "0.875rem", borderRadius: "0.875rem", border: "none", background: T.accent, color: "#fff", fontWeight: 900, fontSize: "0.95rem", cursor: "pointer", touchAction: "manipulation" }}>
+            <button onClick={() => { setAct(2); resetForm(); }}
+              style={{ width: "100%", padding: "0.875rem", borderRadius: "0.875rem", border: "none", background: T.accent, color: "#fff", fontWeight: 900, fontSize: "0.95rem", cursor: "pointer", touchAction: "manipulation" }}>
               Zgłoś ładunek najpierw →
             </button>
           )}
         </div>
       ) : (
         <>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0.75rem", background: "#f0faeb", borderRadius: "0.75rem", border: `1px solid ${T.accent}44`, marginBottom: "0.875rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0.75rem", background: "#f0faeb", borderRadius: "0.75rem", border: `1px solid ${T.accent}44`, marginBottom: "0.75rem" }}>
             <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: T.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <span style={{ fontSize: "0.7rem", fontWeight: 900, color: "#fff" }}>{userFarmer?.name?.charAt(0) ?? "T"}</span>
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: "0.75rem", fontWeight: 700, color: T.text }}>{userFarmer?.name ?? "Ty"}</div>
-              <div style={{ fontSize: "0.68rem", color: T.accent, fontWeight: 600 }}>★ Założyciel puli</div>
+              <div style={{ fontSize: "0.75rem", fontWeight: 700, color: T.text }}>{userFarmer?.name ?? "Ty"} → {ownPoolDest}</div>
+              <div style={{ fontSize: "0.68rem", color: T.accent, fontWeight: 600 }}>★ Założyciel · {ownPoolDate}</div>
             </div>
           </div>
           <CapacityBar current={userTotalPallets} max={TRUCK_CAPACITY} />
@@ -644,8 +676,8 @@ export default function App() {
             ? cropEntries.map(e => <FarmerRow key={e.crop} name={userFarmer.name} crop={e.crop} pallets={e.pallets} isUser />)
             : <FarmerRow name={userFarmer.name} crop={userFarmer.crop} pallets={userFarmer.pallets} isUser />
           )}
-          <div style={{ padding: "0.75rem", background: T.surface, border: `1px solid ${T.border}`, borderRadius: "0.875rem", fontSize: "0.8rem", color: T.muted, marginTop: "0.75rem" }}>
-            🔗 Link do puli zostanie wygenerowany — możesz go wysłać sąsiadom.
+          <div style={{ padding: "0.625rem 0.75rem", background: T.surface, border: `1px solid ${T.border}`, borderRadius: "0.875rem", fontSize: "0.78rem", color: T.muted, marginTop: "0.75rem" }}>
+            🔗 Link do puli — wyślij sąsiadom żeby dołączyli.
           </div>
           {userFarmer && (
             <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: `1px solid ${T.border}` }}>
