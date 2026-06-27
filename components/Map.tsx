@@ -75,9 +75,9 @@ export default function Map({ points, isOnline, focusPoint, route }: MapProps) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function drawRoute(L: any, map: any, latLngs: [number, number][]) {
-    L.polyline(latLngs, { color: "#000", weight: 7, opacity: 0.1, lineJoin: "round" }).addTo(map);
-    const main = L.polyline(latLngs, { color: "#2d5a1b", weight: 5, opacity: 0.9, lineJoin: "round" }).addTo(map);
-    L.polyline(latLngs, { color: "#7bc64a", weight: 3, dashArray: "14, 10", opacity: 0.85, lineJoin: "round" }).addTo(map);
+    L.polyline(latLngs, { color: "#000", weight: 9, opacity: 0.18, lineJoin: "round" }).addTo(map);
+    const main = L.polyline(latLngs, { color: "#1a6fc4", weight: 6, opacity: 1, lineJoin: "round" }).addTo(map);
+    L.polyline(latLngs, { color: "#fff", weight: 2, dashArray: "12, 10", opacity: 0.7, lineJoin: "round" }).addTo(map);
 
     // Animate route drawing via stroke-dashoffset
     requestAnimationFrame(() => {
