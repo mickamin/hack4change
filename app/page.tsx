@@ -296,34 +296,6 @@ export default function App() {
             </select>
           </section>
 
-          {/* Location picker map */}
-          <section>
-            <Label>Lokalizacja pola</Label>
-            <LocationPicker
-              defaultLat={(selectedCommune.latMin + selectedCommune.latMax) / 2}
-              defaultLng={(selectedCommune.lngMin + selectedCommune.lngMax) / 2}
-              onPick={loc => {
-                setPickedLat(loc.lat);
-                setPickedLng(loc.lng);
-                setAddress(loc.address);
-              }}
-            />
-            {address ? (
-              <div style={{ marginTop: "0.5rem", padding: "0.625rem 0.875rem", background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.75rem", fontSize: "0.85rem", color: T.muted }}>
-                {address}
-              </div>
-            ) : (
-              <p style={{ marginTop: "0.375rem", fontSize: "0.75rem", color: T.subtle }}>Tapnij mapę lub przesuń pinezkę na swoje pole.</p>
-            )}
-          </section>
-
-          {/* Contact fields */}
-          <section style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-            <Label>Dane kontaktowe</Label>
-            <input type="text" placeholder="Imię" value={farmerName} onChange={e => setFarmerName(e.target.value)} style={inputBase} />
-            <input type="tel" placeholder="Telefon (kierowca oddzwoni)" value={phone} onChange={e => setPhone(e.target.value)} style={inputBase} />
-          </section>
-
           {/* Crop search + results */}
           <section>
             <Label>Co zbierasz?</Label>
@@ -382,6 +354,34 @@ export default function App() {
               </div>
             </section>
           )}
+
+          {/* Location picker map */}
+          <section>
+            <Label>Lokalizacja pola</Label>
+            <LocationPicker
+              defaultLat={(selectedCommune.latMin + selectedCommune.latMax) / 2}
+              defaultLng={(selectedCommune.lngMin + selectedCommune.lngMax) / 2}
+              onPick={loc => {
+                setPickedLat(loc.lat);
+                setPickedLng(loc.lng);
+                setAddress(loc.address);
+              }}
+            />
+            {address ? (
+              <div style={{ marginTop: "0.5rem", padding: "0.625rem 0.875rem", background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.75rem", fontSize: "0.85rem", color: T.muted }}>
+                {address}
+              </div>
+            ) : (
+              <p style={{ marginTop: "0.375rem", fontSize: "0.75rem", color: T.subtle }}>Tapnij mapę lub przesuń pinezkę na swoje pole.</p>
+            )}
+          </section>
+
+          {/* Contact fields */}
+          <section style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+            <Label>Dane kontaktowe</Label>
+            <input type="text" placeholder="Imię" value={farmerName} onChange={e => setFarmerName(e.target.value)} style={inputBase} />
+            <input type="tel" placeholder="Telefon (kierowca oddzwoni)" value={phone} onChange={e => setPhone(e.target.value)} style={inputBase} />
+          </section>
 
           {canSubmit && (
             <button type="button" onClick={handleSubmit} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.2rem", fontSize: "1.1rem", fontWeight: 900, cursor: "pointer", width: "100%", boxShadow: `0 6px 20px ${T.accent}44`, touchAction: "manipulation" }}>
