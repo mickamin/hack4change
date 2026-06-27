@@ -105,7 +105,7 @@ export default function LocationPicker({ defaultLat, defaultLng, onPick }: Props
   return (
     <div
       ref={mapRef}
-      style={{ width: "100%", height: "200px", borderRadius: "0.875rem", overflow: "hidden", border: "1.5px solid #ddd4b8" }}
+      style={{ width: "100%", height: "200px" }}
     />
   );
 }
