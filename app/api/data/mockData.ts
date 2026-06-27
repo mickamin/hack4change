@@ -1,14 +1,3 @@
-export interface Farmer {
-  id: string;
-  name: string;
-  phone: string;
-  lat: number;
-  lng: number;
-  crop: string;
-  pallets: number;
-  village: string;
-}
-
 export interface EmissionConstants {
   co2PerLiterDiesel: number;
   smallVanLitersPer100km: number;
@@ -21,6 +10,18 @@ export interface WholesalePrice {
   palletWeightKg: number;
 }
 
+export interface Farmer {
+  id: string;
+  name: string;
+  phone: string;
+  lat: number;
+  lng: number;
+  crop: string;
+  pallets: number;
+  village: string;
+  isPoolCreator?: boolean;
+}
+
 export const FARMERS: Farmer[] = [
   {
     id: "f1",
@@ -29,8 +30,9 @@ export const FARMERS: Farmer[] = [
     lat: 54.3284,
     lng: 18.1543,
     crop: "Kapusta biała",
-    pallets: 3,
+    pallets: 5,
     village: "Kartuzy",
+    isPoolCreator: true,
   },
   {
     id: "f2",
@@ -38,8 +40,8 @@ export const FARMERS: Farmer[] = [
     phone: "+48 502 234 567",
     lat: 54.2951,
     lng: 18.0872,
-    crop: "Kapusta biała",
-    pallets: 2,
+    crop: "Ziemniaki",
+    pallets: 7,
     village: "Sierakowice",
   },
   {
@@ -48,8 +50,8 @@ export const FARMERS: Farmer[] = [
     phone: "+48 503 345 678",
     lat: 54.3621,
     lng: 18.2104,
-    crop: "Kapusta biała",
-    pallets: 4,
+    crop: "Marchew",
+    pallets: 3,
     village: "Stężyca",
   },
   {
@@ -59,7 +61,7 @@ export const FARMERS: Farmer[] = [
     lat: 54.3102,
     lng: 18.1287,
     crop: "Kapusta biała",
-    pallets: 2,
+    pallets: 4,
     village: "Żukowo",
   },
   {
@@ -68,19 +70,9 @@ export const FARMERS: Farmer[] = [
     phone: "+48 505 567 890",
     lat: 54.3489,
     lng: 18.0654,
-    crop: "Kapusta biała",
-    pallets: 3,
+    crop: "Buraki ćwikłowe",
+    pallets: 2,
     village: "Somonino",
-  },
-  {
-    id: "f6",
-    name: "Tomasz Borkowski",
-    phone: "+48 506 678 901",
-    lat: 54.2768,
-    lng: 18.1945,
-    crop: "Kapusta biała",
-    pallets: 4,
-    village: "Chmielno",
   },
 ];
 
