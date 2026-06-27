@@ -177,7 +177,7 @@ export default function PrzewoznikPage() {
                 const active = fromCommune.code === c.code;
                 return (
                   <button key={c.code} type="button" onClick={() => setFromCommune(c)}
-                    style={{ padding: "0.75rem 0.4rem", borderRadius: "0.875rem", border: `2px solid ${active ? T.accent : T.border}`, background: active ? "#f0faeb" : T.surface, cursor: "pointer" }}>
+                    style={{ padding: "0.75rem 0.4rem", borderRadius: "0.875rem", border: `2px solid ${active ? T.accent : T.border}`, background: active ? "#f0faeb" : T.surface, cursor: "pointer", touchAction: "manipulation" }}>
                     <span style={{ fontSize: "0.82rem", fontWeight: active ? 800 : 600, color: active ? T.accent : T.text }}>{c.name}</span>
                   </button>
                 );
@@ -192,7 +192,7 @@ export default function PrzewoznikPage() {
                 const active = dest.name === d.name;
                 return (
                   <button key={d.name} type="button" onClick={() => setDest(d)}
-                    style={{ padding: "0.75rem 0.4rem", borderRadius: "0.875rem", border: `2px solid ${active ? T.accent : T.border}`, background: active ? "#f0faeb" : T.surface, cursor: "pointer" }}>
+                    style={{ padding: "0.75rem 0.4rem", borderRadius: "0.875rem", border: `2px solid ${active ? T.accent : T.border}`, background: active ? "#f0faeb" : T.surface, cursor: "pointer", touchAction: "manipulation" }}>
                     <span style={{ fontSize: "0.85rem", fontWeight: active ? 800 : 600, color: active ? T.accent : T.text }}>{d.name}</span>
                   </button>
                 );

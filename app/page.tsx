@@ -397,7 +397,7 @@ export default function App() {
   // ── ACT 3 ─────────────────────────────────────────────────────────────────
   const creator = allFarmers.find(f => f.isPoolCreator) ?? allFarmers[0] ?? null;
   const panelContent = (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflowY: "auto" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflowY: "auto" }}>
       {/* Pool header */}
       <div style={{ padding: "1.25rem 1.25rem 0.875rem", borderBottom: `1px solid ${T.border}` }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
