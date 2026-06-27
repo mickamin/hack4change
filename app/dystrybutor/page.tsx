@@ -272,8 +272,16 @@ export default function DystrybutorPage() {
         </div>
 
         {r.matches.length === 0 ? (
-          <div style={{ background: "#fdf4e6", border: `1px solid ${T.gold}`, borderRadius: "0.875rem", padding: "1rem", fontSize: "0.9rem" }}>
-            Brak "{r.crop}" w regionie na teraz. Spróbuj innego produktu.
+          <div style={{ background: "#f0faeb", border: "1px solid #b0d88a", borderRadius: "0.875rem", padding: "1.25rem", textAlign: "center" }}>
+            <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>✅</div>
+            <div style={{ fontWeight: 800, fontSize: "1rem", color: T.accent, marginBottom: "0.5rem" }}>Zapotrzebowanie zgłoszone!</div>
+            <div style={{ fontSize: "0.85rem", color: T.muted, lineHeight: 1.5 }}>
+              Twoje zapotrzebowanie jest widoczne dla przewoźników i rolników w okolicy.
+              Gdy ktoś będzie miał {r.crop.toLowerCase()} do oddania, dostaniesz powiadomienie.
+            </div>
+            <div style={{ marginTop: "0.75rem", padding: "0.625rem 1rem", background: T.surface, borderRadius: "0.75rem", border: `1px solid ${T.border}`, fontSize: "0.8rem", color: T.text }}>
+              📦 {r.crop} · {r.neededPallets} palet · {r.nearLabel}
+            </div>
           </div>
         ) : (
           <>
