@@ -239,9 +239,14 @@ export default function App() {
           <button onClick={() => setAct(2)} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.5rem", padding: "1.25rem 1rem", fontSize: "1.15rem", fontWeight: 900, cursor: "pointer", boxShadow: `0 8px 24px ${T.accent}55`, touchAction: "manipulation", width: "100%", marginBottom: "1rem" }}>
             Zgłoś ładunek →
           </button>
-          <a href="/przewoznik" style={{ color: T.muted, fontSize: "0.85rem", fontWeight: 600, textDecoration: "none", display: "block", textAlign: "center" }}>
-            Jestem przewoźnikiem
-          </a>
+          <div style={{ display: "flex", justifyContent: "center", gap: "1.5rem" }}>
+            <a href="/przewoznik" style={{ color: T.muted, fontSize: "0.85rem", fontWeight: 600, textDecoration: "none" }}>
+              Jestem przewoznikiem
+            </a>
+            <a href="/dystrybutor" style={{ color: T.muted, fontSize: "0.85rem", fontWeight: 600, textDecoration: "none" }}>
+              Jestem dystrybutorem
+            </a>
+          </div>
         </div>
         <div style={{ height: "10dvh" }} />
       </div>
