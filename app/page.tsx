@@ -8,6 +8,7 @@ import type { Farmer } from "@/app/api/data/mockData";
 import { TERYT_COMMUNES } from "@/app/api/data/mockData";
 
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
+const LocationPicker = dynamic(() => import("@/components/LocationPicker"), { ssr: false });
 
 const T = {
   bg:       "#faf7f0",
@@ -54,6 +55,8 @@ export default function App() {
   const [farmerName, setFarmerName]     = useState("");
   const [phone, setPhone]               = useState("");
   const [address, setAddress]           = useState("");
+  const [pickedLat, setPickedLat]       = useState<number | null>(null);
+  const [pickedLng, setPickedLng]       = useState<number | null>(null);
 
   // Act 3
   const [userFarmer, setUserFarmer]     = useState<Farmer | null>(null);
@@ -121,8 +124,8 @@ export default function App() {
     const base = {
       name: farmerName.trim() || "Rolnik",
       phone: phone.trim(),
-      lat: (c.latMin + c.latMax) / 2,
-      lng: (c.lngMin + c.lngMax) / 2,
+      lat: pickedLat ?? (c.latMin + c.latMax) / 2,
+      lng: pickedLng ?? (c.lngMin + c.lngMax) / 2,
       village: address.trim() || c.name,
     };
     // Submit one farmer entry per crop type
@@ -142,7 +145,7 @@ export default function App() {
 
   function resetForm() {
     setSelectedCommune(TERYT_COMMUNES[0]);
-    setCropEntries([]); setCropSearch(""); setFarmerName(""); setPhone(""); setAddress("");
+    setCropEntries([]); setCropSearch(""); setFarmerName(""); setPhone(""); setAddress(""); setPickedLat(null); setPickedLng(null);
   }
 
   function poolStatus(): "creating" | "joining" {
@@ -247,14 +250,6 @@ export default function App() {
 
         <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem", maxWidth: "520px", width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
 
-          {/* Contact fields — top */}
-          <section style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-            <Label>Dane kontaktowe</Label>
-            <input type="text" placeholder="Imię" value={farmerName} onChange={e => setFarmerName(e.target.value)} style={inputBase} />
-            <input type="tel" placeholder="Telefon (kierowca oddzwoni)" value={phone} onChange={e => setPhone(e.target.value)} style={inputBase} />
-            <input type="text" placeholder="Adres pola / miejscowość" value={address} onChange={e => setAddress(e.target.value)} style={inputBase} />
-          </section>
-
           {/* Commune picker */}
           <section>
             <Label>Twoja gmina</Label>
@@ -269,6 +264,34 @@ export default function App() {
                 );
               })}
             </div>
+          </section>
+
+          {/* Location picker map */}
+          <section>
+            <Label>Lokalizacja pola</Label>
+            <LocationPicker
+              defaultLat={(selectedCommune.latMin + selectedCommune.latMax) / 2}
+              defaultLng={(selectedCommune.lngMin + selectedCommune.lngMax) / 2}
+              onPick={loc => {
+                setPickedLat(loc.lat);
+                setPickedLng(loc.lng);
+                setAddress(loc.address);
+              }}
+            />
+            {address ? (
+              <div style={{ marginTop: "0.5rem", padding: "0.625rem 0.875rem", background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.75rem", fontSize: "0.85rem", color: T.muted }}>
+                {address}
+              </div>
+            ) : (
+              <p style={{ marginTop: "0.375rem", fontSize: "0.75rem", color: T.subtle }}>Tapnij mapę lub przesuń pinezkę na swoje pole.</p>
+            )}
+          </section>
+
+          {/* Contact fields */}
+          <section style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+            <Label>Dane kontaktowe</Label>
+            <input type="text" placeholder="Imię" value={farmerName} onChange={e => setFarmerName(e.target.value)} style={inputBase} />
+            <input type="tel" placeholder="Telefon (kierowca oddzwoni)" value={phone} onChange={e => setPhone(e.target.value)} style={inputBase} />
           </section>
 
           {/* Crop search + results */}

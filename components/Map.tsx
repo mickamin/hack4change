@@ -24,9 +24,10 @@ export default function Map({ points, isOnline, focusPoint }: MapProps) {
 
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!mapRef.current || mapInstanceRef.current || (mapRef.current as any)._leaflet_id) return;
+    if (!mapRef.current || mapInstanceRef.current) return;
 
     import("leaflet").then((L) => {
+      if (!mapRef.current || (mapRef.current as any)._leaflet_id) return;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
