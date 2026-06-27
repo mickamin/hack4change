@@ -50,9 +50,9 @@ export default function Map({ points, isOnline, focusPoint, route, fitPadding }:
       }).addTo(map);
 
       mapInstanceRef.current = { map, L };
-      setTimeout(() => map.invalidateSize(), 200);
+      setTimeout(() => { try { map.invalidateSize(); } catch { /* unmounted */ } }, 200);
       setTimeout(() => {
-        map.invalidateSize();
+        try { map.invalidateSize(); } catch { return; }
         // Render markers if already set before leaflet finished loading
         const pts = pointsRef.current;
         if (pts && pts.length > 0) renderMarkers(L, map, pts);
