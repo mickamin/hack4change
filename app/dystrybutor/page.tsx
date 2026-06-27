@@ -140,7 +140,7 @@ export default function DystrybutorPage() {
 
         <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem", maxWidth: "520px", width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
           {/* Crop search — identical to rolnik */}
-          <section>
+          <section style={{ position: "relative" }}>
             <Label>Jaki produkt</Label>
             <input
               type="text"
@@ -148,21 +148,21 @@ export default function DystrybutorPage() {
               value={cropSearch}
               onChange={(e) => setCropSearch(e.target.value)}
               disabled={cropsLoading}
-              style={{ ...inputBase, marginBottom: "0.625rem" }}
+              style={inputBase}
             />
             {cropsLoading ? (
               <div style={{ textAlign: "center", padding: "1rem", color: T.subtle, fontSize: "0.85rem" }}>Ładowanie...</div>
             ) : cropSearch.trim() && filteredCrops.length === 0 ? (
-              <p style={{ color: T.subtle, fontSize: "0.85rem", margin: 0 }}>Brak wyników.</p>
+              <p style={{ color: T.subtle, fontSize: "0.85rem", margin: "0.5rem 0 0" }}>Brak wyników.</p>
             ) : cropSearch.trim() ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", maxHeight: "200px", overflowY: "auto" }}>
+              <div style={{ position: "absolute", left: 0, right: 0, top: "calc(100% + 4px)", zIndex: 50, background: T.card, border: `1.5px solid ${T.border}`, borderRadius: "0.875rem", boxShadow: "0 8px 24px rgba(0,0,0,0.18)", maxHeight: "220px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.25rem", padding: "0.375rem" }}>
                 {filteredCrops.slice(0, 12).map((c) => {
                   const added = selectedCrops.some((s) => s.name === c);
                   return (
-                    <button key={c} type="button" onClick={() => addCrop(c)}
-                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.625rem 0.875rem", borderRadius: "0.75rem", border: `1.5px solid ${added ? T.accent : T.border}`, background: added ? "#f0faeb" : T.surface, cursor: "pointer", touchAction: "manipulation" }}>
+                    <button key={c} type="button" onMouseDown={(e) => { e.preventDefault(); addCrop(c); }} disabled={added}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.625rem 0.875rem", borderRadius: "0.625rem", border: "none", background: added ? `${T.accent}18` : "transparent", cursor: added ? "default" : "pointer", touchAction: "manipulation", width: "100%" }}>
                       <span style={{ fontSize: "0.9rem", fontWeight: 600, color: added ? T.accent : T.text }}>{capitalize(c)}</span>
-                      <span style={{ fontSize: "1rem", color: added ? T.accent : T.subtle }}>{added ? "v" : "+"}</span>
+                      <span style={{ fontSize: "1rem", color: added ? T.accent : T.subtle }}>{added ? "✓" : "+"}</span>
                     </button>
                   );
                 })}
