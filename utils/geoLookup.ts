@@ -141,10 +141,13 @@ export async function resolveCommuneData(
   const commune = coordsToCommune(lat, lng);
   const { availableCrops, cropMap, dataSource } = await fetchCropAvailability(commune.code);
 
-  // Reconstruct a CropAvailability shape so the rest of the app doesn't change
+  // Reconstruct a CropAvailability shape so the rest of the app doesn't change.
+  // ha (ARiMR registered area) isn't available in the dynamic lookup path —
+  // only in the static CROP_AVAILABILITY data — so default it to empty.
   const availability: CropAvailability = {
     terytCode: commune.code,
     crops: cropMap,
+    ha: {} as Record<CropKey, number>,
   };
 
   return { commune, availability, availableCrops, source, dataSource };
