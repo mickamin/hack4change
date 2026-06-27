@@ -3,9 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
-import { detectCommune, type CommuneResult } from "@/utils/geoLookup";
 import type { OptimizeRouteResponse } from "@/app/api/optimize-route/route";
 import type { Farmer } from "@/app/api/data/mockData";
+import { TERYT_COMMUNES } from "@/app/api/data/mockData";
 
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
 
@@ -38,7 +38,6 @@ function nextThursday(): string {
 }
 
 type Act = 1 | 2 | 3;
-type GpsState = "idle" | "loading" | "done" | "error";
 
 export default function App() {
   const { isOnline, enqueue } = useOfflineSync();
@@ -47,9 +46,9 @@ export default function App() {
   const [isMobile, setIsMobile]         = useState(true);
 
   // Act 2
-  const [gpsState, setGpsState]         = useState<GpsState>("idle");
-  const [gpsError, setGpsError]         = useState<string | null>(null);
-  const [commune, setCommune]           = useState<CommuneResult | null>(null);
+  const [selectedCommune, setSelectedCommune] = useState(TERYT_COMMUNES[0]);
+  const [crops, setCrops]               = useState<string[]>([]);
+  const [cropsLoading, setCropsLoading] = useState(false);
   const [selectedCrop, setSelectedCrop] = useState("");
   const [pallets, setPallets]           = useState(3);
   const [farmerName, setFarmerName]     = useState("");
@@ -97,31 +96,36 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [act]);
 
-  async function handleGPS() {
-    setGpsState("loading");
-    setGpsError(null);
+  // Load crops when commune changes
+  useEffect(() => {
+    let cancelled = false;
+    setCropsLoading(true);
     setSelectedCrop("");
-    try {
-      const result = await detectCommune();
-      setCommune(result);
-      setGpsState("done");
-    } catch (e) {
-      setGpsError(e instanceof Error ? e.message : "Błąd GPS.");
-      setGpsState("error");
-    }
-  }
+    fetch(`/api/crops?teryt=${selectedCommune.code}`)
+      .then(r => r.json())
+      .then(json => {
+        if (cancelled) return;
+        const list: string[] = json.availableCrops ?? [];
+        setCrops(list);
+        if (list.length > 0) setSelectedCrop(list[0]);
+      })
+      .catch(() => { if (!cancelled) setCrops([]); })
+      .finally(() => { if (!cancelled) setCropsLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedCommune]);
 
   function handleSubmit() {
-    if (!commune || !selectedCrop) return;
+    if (!selectedCrop) return;
+    const c = selectedCommune;
     const farmer: Farmer = {
       id: `reg-${Date.now()}`,
       name: farmerName.trim() || "Rolnik",
       phone: "",
-      lat: (commune.commune.latMin + commune.commune.latMax) / 2,
-      lng: (commune.commune.lngMin + commune.commune.lngMax) / 2,
+      lat: (c.latMin + c.latMax) / 2,
+      lng: (c.lngMin + c.lngMax) / 2,
       crop: selectedCrop,
       pallets,
-      village: commune.commune.name,
+      village: c.name,
     };
     enqueue(farmer);
     setUserFarmer(farmer);
@@ -132,16 +136,15 @@ export default function App() {
   }
 
   function resetForm() {
-    setGpsState("idle"); setSelectedCrop(""); setPallets(3);
-    setFarmerName(""); setCommune(null); setGpsError(null);
+    setSelectedCommune(TERYT_COMMUNES[0]);
+    setSelectedCrop(""); setPallets(3); setFarmerName("");
   }
 
-  // Check if a pool for this commune already has declarations
-  function poolStatus(teryt: number): "creating" | "joining" {
+  function poolStatus(): "creating" | "joining" {
     try {
       const existing = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]");
-      const inPool = existing.filter((e: { terytCode: number }) => e.terytCode === teryt).length;
-      return inPool > 0 ? "joining" : "creating";
+      return existing.filter((e: { terytCode: number }) => e.terytCode === selectedCommune.code).length > 0
+        ? "joining" : "creating";
     } catch { return "creating"; }
   }
 
@@ -195,8 +198,8 @@ export default function App() {
 
   // ── ACT 2 ─────────────────────────────────────────────────────────────────
   if (act === 2) {
-    const canSubmit = commune !== null && selectedCrop !== "";
-    const status = commune ? poolStatus(commune.commune.code) : null;
+    const status = poolStatus();
+    const canSubmit = selectedCrop !== "";
     const inputBase: React.CSSProperties = {
       background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.875rem",
       color: T.text, width: "100%", padding: "0.875rem 1rem", fontSize: "1rem", outline: "none", boxSizing: "border-box",
@@ -208,10 +211,10 @@ export default function App() {
           <button onClick={() => setAct(1)} style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1 }}>←</button>
           <div>
             <div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>
-              {status === "joining" ? "Dołącz do puli" : status === "creating" ? "Załóż pulę" : "Zgłoś towar"}
+              {status === "joining" ? "Dołącz do puli" : "Załóż pulę"}
             </div>
             <div style={{ fontSize: "0.7rem", color: T.subtle }}>
-              {status === "joining" ? `Rolnicy z ${commune!.commune.name} już czekają` : "Pierwszy w gminie tej puli?"}
+              {status === "joining" ? `Rolnicy z ${selectedCommune.name} już czekają` : "Bądź pierwszy w swojej gminie"}
             </div>
           </div>
           <div style={{ marginLeft: "auto" }}><OnlineBadge isOnline={isOnline} /></div>
@@ -219,39 +222,45 @@ export default function App() {
 
         <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem", maxWidth: "520px", width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
 
-          {/* GPS */}
+          {/* Commune picker */}
           <section>
-            <Label>Twoja lokalizacja</Label>
-            <button type="button" onClick={handleGPS} disabled={gpsState === "loading"} style={{ width: "100%", padding: "1.1rem", borderRadius: "1rem", border: `2px solid ${gpsState === "done" ? T.accent : gpsState === "error" ? "#c87050" : T.border}`, background: gpsState === "done" ? "#f0faeb" : gpsState === "error" ? "#fdf0eb" : T.surface, color: gpsState === "done" ? T.accent : gpsState === "error" ? "#b84030" : T.text, fontSize: "1rem", fontWeight: 700, cursor: gpsState === "loading" ? "wait" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", touchAction: "manipulation" }}>
-              {gpsState === "loading" && <><SpinIcon /> Szukam GPS…</>}
-              {gpsState === "done" && commune && <>✓ {commune.commune.name}{commune.source === "fallback" && <span style={{ color: T.gold, fontSize: "0.8rem" }}> (fallback)</span>}</>}
-              {gpsState === "error" && <>Błąd — spróbuj ponownie</>}
-              {gpsState === "idle" && <>Pobierz lokalizację z pola</>}
-            </button>
-            {gpsError && <p style={{ color: "#b84030", fontSize: "0.75rem", marginTop: "0.4rem" }}>{gpsError}</p>}
-            {gpsState === "done" && commune && (
-              <p style={{ color: T.subtle, fontSize: "0.72rem", marginTop: "0.4rem", textAlign: "center" }}>
-                TERYT {commune.commune.code} · {commune.availableCrops.length} upraw w ARiMR
-              </p>
-            )}
+            <Label>Twoja gmina</Label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem" }}>
+              {TERYT_COMMUNES.filter(c => c.powiat !== "Gdańsk").map(c => {
+                const active = selectedCommune.code === c.code;
+                return (
+                  <button key={c.code} type="button" onClick={() => setSelectedCommune(c)}
+                    style={{ padding: "0.75rem 0.4rem", borderRadius: "0.875rem", border: `2px solid ${active ? T.accent : T.border}`, background: active ? "#f0faeb" : T.surface, cursor: "pointer", touchAction: "manipulation", transition: "border-color 0.12s, background 0.12s" }}>
+                    <span style={{ fontSize: "0.82rem", fontWeight: active ? 800 : 600, color: active ? T.accent : T.text }}>{c.name}</span>
+                  </button>
+                );
+              })}
+            </div>
           </section>
 
           {/* Crop grid */}
-          {commune && commune.availableCrops.length > 0 && (
-            <section>
-              <Label>Co zbierasz?</Label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem", maxHeight: "320px", overflowY: "auto" }}>
-                {commune.availableCrops.map((crop) => {
+          <section>
+            <Label>Co zbierasz?</Label>
+            {cropsLoading ? (
+              <div style={{ textAlign: "center", padding: "1.5rem", color: T.subtle, fontSize: "0.85rem" }}>
+                <SpinIcon /> Ładowanie upraw…
+              </div>
+            ) : crops.length === 0 ? (
+              <p style={{ color: T.subtle, fontSize: "0.85rem" }}>Brak danych dla tej gminy.</p>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem", maxHeight: "280px", overflowY: "auto" }}>
+                {crops.map(crop => {
                   const active = selectedCrop === crop;
                   return (
-                    <button key={crop} type="button" onClick={() => setSelectedCrop(crop)} style={{ padding: "0.75rem 0.4rem", borderRadius: "0.875rem", border: `2px solid ${active ? T.accent : T.border}`, background: active ? "#f0faeb" : T.surface, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", touchAction: "manipulation", transition: "border-color 0.12s, background 0.12s" }}>
+                    <button key={crop} type="button" onClick={() => setSelectedCrop(crop)}
+                      style={{ padding: "0.75rem 0.4rem", borderRadius: "0.875rem", border: `2px solid ${active ? T.accent : T.border}`, background: active ? "#f0faeb" : T.surface, cursor: "pointer", touchAction: "manipulation", transition: "border-color 0.12s, background 0.12s" }}>
                       <span style={{ fontSize: "0.8rem", fontWeight: active ? 800 : 600, color: active ? T.accent : T.text, textAlign: "center", lineHeight: 1.3 }}>{capitalize(crop)}</span>
                     </button>
                   );
                 })}
               </div>
-            </section>
-          )}
+            )}
+          </section>
 
           {/* Pallet counter */}
           {selectedCrop && (
@@ -276,9 +285,11 @@ export default function App() {
             </section>
           )}
 
-          <button type="button" disabled={!canSubmit} onClick={handleSubmit} style={{ background: canSubmit ? T.accent : T.surface, color: canSubmit ? "#fff" : T.subtle, border: `2px solid ${canSubmit ? T.accent : T.border}`, borderRadius: "1.25rem", padding: "1.2rem", fontSize: "1.1rem", fontWeight: 900, cursor: canSubmit ? "pointer" : "not-allowed", width: "100%", boxShadow: canSubmit ? `0 6px 20px ${T.accent}44` : "none", transition: "all 0.2s", touchAction: "manipulation" }}>
-            {status === "joining" ? "Dołącz do puli" : "Załóż pulę"}
-          </button>
+          {canSubmit && (
+            <button type="button" onClick={handleSubmit} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.2rem", fontSize: "1.1rem", fontWeight: 900, cursor: "pointer", width: "100%", boxShadow: `0 6px 20px ${T.accent}44`, touchAction: "manipulation" }}>
+              {status === "joining" ? "Dołącz do puli" : "Załóż pulę"}
+            </button>
+          )}
 
           <div style={{ height: "1rem" }} />
         </div>
