@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { haversineKm, type EmptyRunResult, type GeoPoint, type DistributorMatch } from "@/utils/emptyRuns";
 
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
@@ -98,7 +97,6 @@ function useNominatim() {
 }
 
 export default function PrzewoznikPage() {
-  const { isOnline } = useOfflineSync();
   const [hydrated, setHydrated] = useState(false);
   const [act, setAct] = useState<Act>("form");
 
@@ -421,7 +419,7 @@ export default function PrzewoznikPage() {
       </div>
 
       <div style={{ height: "44dvh", minHeight: "260px", position: "relative" }}>
-        <Map points={mapPoints} isOnline={isOnline} route={routePts} focusPoint={from} />
+        <Map points={mapPoints} route={routePts} focusPoint={from} />
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "1rem 1.25rem", maxWidth: "560px", width: "100%", margin: "0 auto" }}>

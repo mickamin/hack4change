@@ -42,7 +42,7 @@ function nextThursday(): string {
 type Act = 1 | 2 | 3;
 
 export default function App() {
-  const { isOnline, enqueue } = useOfflineSync();
+  const { enqueue } = useOfflineSync();
   const [hydrated, setHydrated]         = useState(false);
   const [act, setAct]                   = useState<Act>(2);
   const [isMobile, setIsMobile]         = useState(true);
@@ -302,7 +302,6 @@ export default function App() {
               {status === "joining" ? `Rolnicy z ${selectedCommune.name} już czekają` : "Bądź pierwszy w swojej gminie"}
             </div>
           </div>
-          <div style={{ marginLeft: "auto" }}><OnlineBadge isOnline={isOnline} /></div>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem", maxWidth: "520px", width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -740,7 +739,6 @@ export default function App() {
               Otwarta · Zbieranie zgłoszeń
             </div>
           </div>
-          <OnlineBadge isOnline={isOnline} />
         </div>
 
         {/* Pool tabs */}
@@ -787,7 +785,7 @@ export default function App() {
     return (
       <div style={{ height: "100vh", position: "relative", overflow: "hidden" }}>
         {/* Map — always full width */}
-        <Map key={`act3-pool${selectedPool}-${ownPoolDest ?? ""}`} points={activeMapPoints} route={activeRoute} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} fitPadding={isMobile ? { top: 48, right: 48, bottom: Math.round(typeof window !== "undefined" ? window.innerHeight * 0.65 : 400), left: 48 } : { top: 48, right: 48 + 360, bottom: 48, left: 48 }} />
+        <Map key={`act3-pool${selectedPool}-${ownPoolDest ?? ""}`} points={activeMapPoints} route={activeRoute} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} fitPadding={isMobile ? { top: 48, right: 48, bottom: Math.round(typeof window !== "undefined" ? window.innerHeight * 0.65 : 400), left: 48 } : { top: 48, right: 48 + 360, bottom: 48, left: 48 }} />
 
         {/* Top-left logo */}
         <div style={{ position: "absolute", top: "1rem", left: "1rem", zIndex: 500, background: "rgba(255,253,247,0.92)", border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.4rem 0.875rem", display: "flex", alignItems: "center", gap: "0.4rem", backdropFilter: "blur(6px)" }}>
@@ -807,13 +805,12 @@ export default function App() {
   return (
     <div style={{ height: "100dvh", position: "relative", overflow: "hidden" }}>
       <div style={{ position: "absolute", inset: 0 }}>
-        <Map key={`act3-pool${selectedPool}-${ownPoolDest ?? ""}`} points={activeMapPoints} route={activeRoute} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} fitPadding={isMobile ? { top: 48, right: 48, bottom: Math.round(typeof window !== "undefined" ? window.innerHeight * 0.65 : 400), left: 48 } : { top: 48, right: 48 + 360, bottom: 48, left: 48 }} />
+        <Map key={`act3-pool${selectedPool}-${ownPoolDest ?? ""}`} points={activeMapPoints} route={activeRoute} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} fitPadding={isMobile ? { top: 48, right: 48, bottom: Math.round(typeof window !== "undefined" ? window.innerHeight * 0.65 : 400), left: 48 } : { top: 48, right: 48 + 360, bottom: 48, left: 48 }} />
       </div>
 
       {/* Top bar */}
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 500, padding: "0.875rem 1rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "linear-gradient(to bottom, rgba(26,46,10,0.8) 0%, transparent 100%)" }}>
         <span style={{ fontWeight: 900, fontSize: "1rem", color: "#e8f0d8" }}>🌾 AgroPool</span>
-        <OnlineBadge isOnline={isOnline} />
       </div>
 
       {/* Bottom sheet */}
@@ -891,15 +888,6 @@ function CounterBtn({ onClick, disabled, children }: { onClick: () => void; disa
     <button type="button" onClick={onClick} disabled={disabled} style={{ width: "68px", height: "68px", borderRadius: "1rem", background: T.surface, border: `2px solid ${T.border}`, color: disabled ? T.subtle : T.text, fontSize: "2rem", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: disabled ? "not-allowed" : "pointer", flexShrink: 0, touchAction: "manipulation" }}>
       {children}
     </button>
-  );
-}
-
-function OnlineBadge({ isOnline }: { isOnline: boolean }) {
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.3rem 0.7rem", borderRadius: "999px", fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", background: isOnline ? "rgba(240,250,235,0.9)" : "rgba(253,240,235,0.9)", border: `1.5px solid ${isOnline ? T.accent : "#c87050"}`, color: isOnline ? T.accent : "#7a2808" }}>
-      <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: isOnline ? T.accent : "#c87050" }} />
-      {isOnline ? "Online" : "Offline"}
-    </span>
   );
 }
 

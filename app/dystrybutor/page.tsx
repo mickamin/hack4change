@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { TERYT_COMMUNES, type TerytCommune } from "@/app/api/data/mockData";
 import type { DistributorResult } from "@/utils/distributors";
 import type { GeoPoint } from "@/utils/emptyRuns";
@@ -27,7 +26,6 @@ function communeCentroid(c: TerytCommune): GeoPoint {
 }
 
 export default function DystrybutorPage() {
-  const { isOnline } = useOfflineSync();
   const [hydrated, setHydrated] = useState(false);
   const [act, setAct] = useState<Act>(2);
 
@@ -255,7 +253,7 @@ export default function DystrybutorPage() {
       </div>
 
       <div style={{ height: "44dvh", minHeight: "260px", position: "relative" }}>
-        <Map points={mapPoints} isOnline={isOnline} route={routePts} focusPoint={nearPoint} />
+        <Map points={mapPoints} route={routePts} focusPoint={nearPoint} />
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "1rem 1.25rem", maxWidth: "560px", width: "100%", margin: "0 auto" }}>

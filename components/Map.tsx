@@ -13,13 +13,12 @@ interface MapPoint {
 
 interface MapProps {
   points: MapPoint[];
-  isOnline: boolean;
   focusPoint?: { lat: number; lng: number } | null;
   route?: Array<{ lat: number; lng: number }>;
   fitPadding?: { top: number; right: number; bottom: number; left: number };
 }
 
-export default function Map({ points, isOnline, focusPoint, route, fitPadding }: MapProps) {
+export default function Map({ points, focusPoint, route, fitPadding }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapInstanceRef = useRef<any>(null);
@@ -167,14 +166,6 @@ export default function Map({ points, isOnline, focusPoint, route, fitPadding }:
   return (
     <div className="relative w-full h-full">
       <div ref={mapRef} className="w-full h-full" />
-      {!isOnline && (
-        <div
-          style={{ background: "rgba(30,10,0,0.82)", color: "#fcd580", border: "1px solid #78450a" }}
-          className="absolute top-3 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-1.5 rounded-full z-[1000] whitespace-nowrap"
-        >
-          Tryb offline — mapa z pamięci podręcznej
-        </div>
-      )}
     </div>
   );
 }
