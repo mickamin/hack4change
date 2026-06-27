@@ -259,10 +259,10 @@ export default function App() {
           <a href="/" style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1, textDecoration: "none" }}>&#8592;</a>
           <div>
             <div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>
-              {status === "joining" ? "Dołącz do puli" : "Załóż pulę"}
+              {status === "joining" ? "Dolacz do puli" : "Zglos ladunek"}
             </div>
             <div style={{ fontSize: "0.7rem", color: T.subtle }}>
-              {status === "joining" ? `Rolnicy z ${selectedCommune.name} już czekają` : "Bądź pierwszy w swojej gminie"}
+              {status === "joining" ? `Rolnicy z ${selectedCommune.name} juz czekaja` : "Badz pierwszy w swojej gminie"}
             </div>
           </div>
           <div style={{ marginLeft: "auto" }}><OnlineBadge isOnline={isOnline} /></div>
@@ -270,48 +270,21 @@ export default function App() {
 
         <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem", maxWidth: "520px", width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
 
-          {/* Commune picker */}
+          {/* Commune picker — dropdown */}
           <section>
             <Label>Twoja gmina</Label>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem" }}>
-              {TERYT_COMMUNES.filter(c => c.powiat !== "Gdańsk").map(c => {
-                const active = selectedCommune.code === c.code;
-                return (
-                  <button key={c.code} type="button" onClick={() => setSelectedCommune(c)}
-                    style={{ padding: "0.75rem 0.4rem", borderRadius: "0.875rem", border: `2px solid ${active ? T.accent : T.border}`, background: active ? "#f0faeb" : T.surface, cursor: "pointer", touchAction: "manipulation", transition: "border-color 0.12s, background 0.12s" }}>
-                    <span style={{ fontSize: "0.82rem", fontWeight: active ? 800 : 600, color: active ? T.accent : T.text }}>{c.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* Location picker map */}
-          <section>
-            <Label>Lokalizacja pola</Label>
-            <LocationPicker
-              defaultLat={(selectedCommune.latMin + selectedCommune.latMax) / 2}
-              defaultLng={(selectedCommune.lngMin + selectedCommune.lngMax) / 2}
-              onPick={loc => {
-                setPickedLat(loc.lat);
-                setPickedLng(loc.lng);
-                setAddress(loc.address);
+            <select
+              value={selectedCommune.code}
+              onChange={e => {
+                const c = TERYT_COMMUNES.find(c => c.code === Number(e.target.value));
+                if (c) setSelectedCommune(c);
               }}
-            />
-            {address ? (
-              <div style={{ marginTop: "0.5rem", padding: "0.625rem 0.875rem", background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.75rem", fontSize: "0.85rem", color: T.muted }}>
-                {address}
-              </div>
-            ) : (
-              <p style={{ marginTop: "0.375rem", fontSize: "0.75rem", color: T.subtle }}>Tapnij mapę lub przesuń pinezkę na swoje pole.</p>
-            )}
-          </section>
-
-          {/* Contact fields */}
-          <section style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-            <Label>Dane kontaktowe</Label>
-            <input type="text" placeholder="Imię" value={farmerName} onChange={e => setFarmerName(e.target.value)} style={inputBase} />
-            <input type="tel" placeholder="Telefon (kierowca oddzwoni)" value={phone} onChange={e => setPhone(e.target.value)} style={inputBase} />
+              style={{ background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.875rem", color: T.text, width: "100%", padding: "0.875rem 1rem", fontSize: "1rem", outline: "none", boxSizing: "border-box" as const, appearance: "none" as const, backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a6a48' strokeWidth='1.5' fill='none' strokeLinecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 1rem center", paddingRight: "2.5rem" }}
+            >
+              {TERYT_COMMUNES.filter(c => c.powiat !== "Gdańsk").map(c => (
+                <option key={c.code} value={c.code}>{c.name} ({c.powiat})</option>
+              ))}
+            </select>
           </section>
 
           {/* Crop search + results */}
@@ -380,9 +353,30 @@ export default function App() {
             </section>
           )}
 
+          {/* Location picker map */}
+          <section>
+            <Label>Miejsce odbioru</Label>
+            <LocationPicker
+              defaultLat={(selectedCommune.latMin + selectedCommune.latMax) / 2}
+              defaultLng={(selectedCommune.lngMin + selectedCommune.lngMax) / 2}
+              onPick={loc => {
+                setPickedLat(loc.lat);
+                setPickedLng(loc.lng);
+                setAddress(loc.address);
+              }}
+            />
+          </section>
+
+          {/* Contact fields */}
+          <section style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+            <Label>Dane kontaktowe</Label>
+            <input type="text" placeholder="Imię" value={farmerName} onChange={e => setFarmerName(e.target.value)} style={inputBase} />
+            <input type="tel" placeholder="Telefon (kierowca oddzwoni)" value={phone} onChange={e => setPhone(e.target.value)} style={inputBase} />
+          </section>
+
           {canSubmit && (
             <button type="button" onClick={handleSubmit} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.2rem", fontSize: "1.1rem", fontWeight: 900, cursor: "pointer", width: "100%", boxShadow: `0 6px 20px ${T.accent}44`, touchAction: "manipulation" }}>
-              {status === "joining" ? "Dołącz do puli" : "Załóż pulę"}
+              {status === "joining" ? "Dołącz do puli" : "Zglos ladunek"}
             </button>
           )}
 
