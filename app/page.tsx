@@ -232,17 +232,12 @@ export default function App() {
             AgroPool łączy rolników z tej samej gminy i wysyła jedną ciężarówkę.
           </p>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.75rem" }}>
-            <button onClick={() => setAct(2)} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.25rem 1rem", fontSize: "1rem", fontWeight: 900, cursor: "pointer", boxShadow: `0 6px 20px ${T.accent}55`, touchAction: "manipulation", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.4rem" }}>
-              <span style={{ fontSize: "1.75rem" }}>🌾</span>
-              Jestem rolnikiem
-            </button>
-            <a href="/przewoznik" style={{ background: T.card, color: T.text, border: `2px solid ${T.border}`, borderRadius: "1.25rem", padding: "1.25rem 1rem", fontSize: "1rem", fontWeight: 900, cursor: "pointer", textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.4rem", touchAction: "manipulation" }}>
-              <span style={{ fontSize: "1.75rem" }}>🚚</span>
-              Jestem przewoźnikiem
-            </a>
-          </div>
-          <p style={{ color: T.subtle, fontSize: "0.7rem", marginTop: "0.75rem" }}>Offline-first · Działa bez zasięgu · Powiat Kartuski</p>
+          <button onClick={() => setAct(2)} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.5rem", padding: "1.25rem 1rem", fontSize: "1.15rem", fontWeight: 900, cursor: "pointer", boxShadow: `0 8px 24px ${T.accent}55`, touchAction: "manipulation", width: "100%", marginBottom: "1rem" }}>
+            Zgłoś ładunek →
+          </button>
+          <a href="/przewoznik" style={{ color: T.muted, fontSize: "0.85rem", fontWeight: 600, textDecoration: "none", display: "block", textAlign: "center" }}>
+            Jestem przewoźnikiem
+          </a>
         </div>
         <div style={{ height: "10dvh" }} />
       </div>
@@ -624,12 +619,9 @@ export default function App() {
       </div>
 
       {/* Actions */}
-      <div style={{ padding: "0.875rem 1.25rem", borderTop: `1px solid ${T.border}`, display: "flex", gap: "0.625rem" }}>
-        <button onClick={() => { setAct(2); resetForm(); }} style={{ flex: 1, padding: "0.75rem", borderRadius: "0.875rem", border: `1.5px solid ${T.border}`, background: T.surface, color: T.muted, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>
-          + Dołącz
-        </button>
-        <button onClick={() => setAct(1)} style={{ flex: 1, padding: "0.75rem", borderRadius: "0.875rem", border: "none", background: T.accent, color: "#fff", fontWeight: 900, fontSize: "0.85rem", cursor: "pointer" }}>
-          Start
+      <div style={{ padding: "0.75rem 1.25rem", borderTop: `1px solid ${T.border}`, textAlign: "center" }}>
+        <button onClick={() => { setAct(2); resetForm(); }} style={{ background: "none", border: "none", color: T.muted, fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", touchAction: "manipulation" }}>
+          ← Zgłoś kolejny ładunek
         </button>
       </div>
     </div>
