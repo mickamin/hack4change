@@ -142,9 +142,11 @@ export async function resolveCommuneData(
   const { availableCrops, cropMap, dataSource } = await fetchCropAvailability(commune.code);
 
   // Reconstruct a CropAvailability shape so the rest of the app doesn't change
+  const existing = CROP_AVAILABILITY.find(a => a.terytCode === commune.code);
   const availability: CropAvailability = {
     terytCode: commune.code,
     crops: cropMap,
+    ha: existing?.ha ?? Object.fromEntries(Object.keys(cropMap).map(k => [k, 0])) as CropAvailability["ha"],
   };
 
   return { commune, availability, availableCrops, source, dataSource };
