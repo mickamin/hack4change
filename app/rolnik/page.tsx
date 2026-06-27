@@ -43,7 +43,7 @@ type Act = 1 | 2 | 3;
 export default function App() {
   const { isOnline, enqueue } = useOfflineSync();
   const [hydrated, setHydrated]         = useState(false);
-  const [act, setAct]                   = useState<Act>(1);
+  const [act, setAct]                   = useState<Act>(2);
   const [isMobile, setIsMobile]         = useState(true);
 
   // Act 2
@@ -256,7 +256,7 @@ export default function App() {
     return (
       <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", color: T.text }}>
         <div style={{ background: T.card, borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: "1rem", padding: "1rem 1.25rem", flexShrink: 0 }}>
-          <button onClick={() => setAct(1)} style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1 }}>←</button>
+          <a href="/" style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1, textDecoration: "none" }}>&#8592;</a>
           <div>
             <div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>
               {status === "joining" ? "Dołącz do puli" : "Załóż pulę"}
@@ -453,9 +453,9 @@ export default function App() {
         <button onClick={() => { setAct(2); resetForm(); }} style={{ flex: 1, padding: "0.75rem", borderRadius: "0.875rem", border: `1.5px solid ${T.border}`, background: T.surface, color: T.muted, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>
           + Nowe zgłoszenie
         </button>
-        <button onClick={() => setAct(1)} style={{ flex: 1, padding: "0.75rem", borderRadius: "0.875rem", border: "none", background: T.accent, color: "#fff", fontWeight: 900, fontSize: "0.85rem", cursor: "pointer" }}>
+        <a href="/" style={{ flex: 1, padding: "0.75rem", borderRadius: "0.875rem", border: "none", background: T.accent, color: "#fff", fontWeight: 900, fontSize: "0.85rem", cursor: "pointer", textAlign: "center", textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
           Start
-        </button>
+        </a>
       </div>
     </div>
   );
