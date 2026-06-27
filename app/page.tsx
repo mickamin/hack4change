@@ -158,9 +158,11 @@ export default function App() {
 
   const allFarmers = routeData?.farmers ?? [];
   const visibleFarmers = allFarmers.slice(0, countedFarmers);
+  const hub = routeData?.hub;
   const mapPoints = [
-    ...visibleFarmers.map((f, i) => ({ lat: f.lat, lng: f.lng, name: f.name, isHub: i === 0, isUser: false })),
+    ...visibleFarmers.map(f => ({ lat: f.lat, lng: f.lng, name: f.name, isHub: false, isUser: false })),
     ...(userFarmer ? [{ lat: userFarmer.lat, lng: userFarmer.lng, name: `${userFarmer.name} (Ty)`, isUser: true, isHub: false }] : []),
+    ...(hub && animStep >= 2 ? [{ lat: hub.lat, lng: hub.lng, name: hub.name, isHub: true, isUser: false }] : []),
   ];
 
   const metrics = routeData?.metrics;

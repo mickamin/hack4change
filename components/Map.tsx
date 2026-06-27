@@ -123,6 +123,10 @@ export default function Map({ points, isOnline, focusPoint, route }: MapProps) {
     const blue = L.polyline(latLngs, { color: "#1a6fc4", weight: 6, opacity: 1, lineJoin: "round" }).addTo(map);
     const dash = L.polyline(latLngs, { color: "#fff", weight: 2, dashArray: "12, 10", opacity: 0.7, lineJoin: "round" }).addTo(map);
 
+    // Fit map to show full route
+    const bounds = L.latLngBounds(latLngs);
+    map.fitBounds(bounds, { padding: [48, 48], animate: true, duration: 1.0 });
+
     // Animate both layers via stroke-dashoffset
     [blue, dash].forEach(poly => {
       requestAnimationFrame(() => {
