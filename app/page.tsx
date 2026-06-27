@@ -1,75 +1,821 @@
-import Link from "next/link";
+"use client";
 
-// Ekran startowy — wybór roli (Rolnik / Przewoźnik / Dystrybutor).
+import { useEffect, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
+import type { OptimizeRouteResponse } from "@/app/api/optimize-route/route";
+import type { Farmer } from "@/app/api/data/mockData";
+import { TERYT_COMMUNES, CROP_AVAILABILITY, type CropKey } from "@/app/api/data/mockData";
+
+const Map = dynamic(() => import("@/components/Map"), { ssr: false });
+const LocationPicker = dynamic(() => import("@/components/LocationPicker"), { ssr: false });
+
 const T = {
-  bg: "#faf7f0",
-  card: "#fffdf7",
-  surface: "#f5f0e4",
-  border: "#ddd4b8",
-  accent: "#2d5a1b",
+  bg:       "#faf7f0",
+  card:     "#fffdf7",
+  surface:  "#f5f0e4",
+  border:   "#ddd4b8",
+  accent:   "#2d5a1b",
   accentHi: "#3a7a22",
-  gold: "#c8781a",
-  text: "#2a1a08",
-  muted: "#7a6a48",
-  subtle: "#9a8a60",
+  gold:     "#c8781a",
+  text:     "#2a1a08",
+  muted:    "#7a6a48",
+  subtle:   "#9a8a60",
 };
 
-export default function HomePage() {
-  return (
-    <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1.5rem", color: T.text }}>
-      <div style={{ maxWidth: "440px", width: "100%", textAlign: "center" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", background: T.card, border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.3rem 0.9rem", marginBottom: "1.75rem" }}>
-          <span>🌾</span>
-          <span style={{ fontWeight: 800, fontSize: "0.85rem", color: T.accentHi }}>AgroPool</span>
-          <span style={{ fontSize: "0.65rem", color: T.subtle }}>· Powiat Kartuski</span>
+const TRUCK_CAPACITY = 24; // pallets
+const PENDING_KEY = "agropool_pending_requests";
+
+function capitalize(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function nextThursday(): string {
+  const d = new Date();
+  const day = d.getDay(); // 0=Sun … 4=Thu
+  const daysUntil = (4 - day + 7) % 7 || 7;
+  d.setDate(d.getDate() + daysUntil);
+  return d.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "short" });
+}
+
+type Act = 1 | 2 | 3;
+
+export default function App() {
+  const { isOnline, enqueue } = useOfflineSync();
+  const [hydrated, setHydrated]         = useState(false);
+  const [act, setAct]                   = useState<Act>(1);
+  const [isMobile, setIsMobile]         = useState(true);
+
+  // Act 2
+  const [selectedCommune, setSelectedCommune] = useState(TERYT_COMMUNES[0]);
+  const [crops, setCrops]               = useState<string[]>([]);
+  const [cropsLoading, setCropsLoading] = useState(false);
+  const [haMap, setHaMap]               = useState<Record<string, number>>({});
+  const [cropEntries, setCropEntries]   = useState<{crop: string; pallets: number}[]>([]);
+  const [cropSearch, setCropSearch]     = useState("");
+  const [farmerName, setFarmerName]     = useState("");
+  const [phone, setPhone]               = useState("");
+  const [address, setAddress]           = useState("");
+  const [pickedLat, setPickedLat]       = useState<number | null>(null);
+  const [pickedLng, setPickedLng]       = useState<number | null>(null);
+
+  // Act 3
+  const [userFarmer, setUserFarmer]     = useState<Farmer | null>(null);
+  const [routeData, setRouteData]       = useState<OptimizeRouteResponse | null>(null);
+  const [showPanel, setShowPanel]       = useState(false);
+  const [countedFarmers, setCountedFarmers] = useState(0);
+  const [animStep, setAnimStep]         = useState(0);
+  const [selectedPool, setSelectedPool] = useState<0|1|2|3>(0);
+  // which pool the user joined: 0=own pool, 1=pool2, 2=truck, 3=none yet
+  const [joinedPool, setJoinedPool]     = useState<0|1|2|null>(null);
+
+  useEffect(() => {
+    setHydrated(true);
+    const check = () => setIsMobile(window.innerWidth < 900);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  const fetchRoute = useCallback(async () => {
+    try {
+      const res = await fetch("/api/optimize-route");
+      setRouteData(await res.json());
+    } catch { /* offline */ }
+  }, []);
+
+  useEffect(() => { fetchRoute(); }, [fetchRoute]);
+
+  // Stagger dots → route → panel
+  useEffect(() => {
+    if (act !== 3) return;
+    const total = routeData?.farmers.length ?? 0;
+    if (total === 0) { setAnimStep(2); setShowPanel(true); return; }
+    let i = 0;
+    const t = setInterval(() => {
+      i++;
+      setCountedFarmers(i);
+      if (i >= total) {
+        clearInterval(t);
+        setTimeout(() => setAnimStep(1), 500);
+        setTimeout(() => { setAnimStep(2); setShowPanel(true); }, 1200);
+      }
+    }, 320);
+    return () => clearInterval(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [act]);
+
+  // Load crops when commune changes
+  useEffect(() => {
+    let cancelled = false;
+    setCropsLoading(true);
+    setCropSearch("");
+    fetch(`/api/crops?teryt=${selectedCommune.code}`)
+      .then(r => r.json())
+      .then(json => {
+        if (cancelled) return;
+        const list: string[] = json.availableCrops ?? [];
+        setCrops(list);
+        setHaMap(json.haMap ?? {});
+      })
+      .catch(() => { if (!cancelled) setCrops([]); })
+      .finally(() => { if (!cancelled) setCropsLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedCommune]);
+
+  function handleSubmit() {
+    if (cropEntries.length === 0) return;
+    const c = selectedCommune;
+    const base = {
+      name: farmerName.trim() || "Rolnik",
+      phone: phone.trim(),
+      lat: pickedLat ?? (c.latMin + c.latMax) / 2,
+      lng: pickedLng ?? (c.lngMin + c.lngMax) / 2,
+      village: address.trim() || c.name,
+    };
+    // Submit one farmer entry per crop type
+    const farmers = cropEntries.map((e, i) => ({
+      ...base,
+      id: `reg-${Date.now()}-${i}`,
+      crop: e.crop,
+      pallets: e.pallets,
+    }));
+    farmers.forEach(f => enqueue(f));
+    setUserFarmer(farmers[0]);
+    setJoinedPool(0);
+    setSelectedPool(0);
+    setCountedFarmers(0);
+    setAnimStep(0);
+    setShowPanel(false);
+    setAct(3);
+  }
+
+  function resetForm() {
+    setSelectedCommune(TERYT_COMMUNES[0]);
+    setCropEntries([]); setCropSearch(""); setFarmerName(""); setPhone(""); setAddress(""); setPickedLat(null); setPickedLng(null);
+  }
+
+  function poolStatus(): "creating" | "joining" {
+    try {
+      const existing = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]");
+      return existing.filter((e: { terytCode: number }) => e.terytCode === selectedCommune.code).length > 0
+        ? "joining" : "creating";
+    } catch { return "creating"; }
+  }
+
+  const allFarmers = routeData?.farmers ?? [];
+  const visibleFarmers = allFarmers.slice(0, countedFarmers);
+  const hub = routeData?.hub;
+  const metrics = routeData?.metrics;
+  const pricesMap = routeData?.pricesMap ?? {};
+
+  const userTotalPallets = cropEntries.length > 0
+    ? cropEntries.reduce((s, e) => s + e.pallets, 0)
+    : (userFarmer?.pallets ?? 0);
+
+  // Personal metrics for this farmer
+  const userEarningsPln = cropEntries.length > 0
+    ? cropEntries.reduce((s, e) => s + e.pallets * (pricesMap[e.crop] ?? 500), 0)
+    : userFarmer ? (userFarmer.pallets * (pricesMap[userFarmer.crop] ?? 500)) : 0;
+  const userTransportCostPln = metrics && metrics.totalPallets > 0
+    ? Math.round(metrics.costConsolidatedPln * (userTotalPallets / metrics.totalPallets))
+    : 0;
+  const costPerPalletPln = metrics && metrics.totalPallets > 0
+    ? Math.round(metrics.costConsolidatedPln / metrics.totalPallets)
+    : 0;
+  const userIndividualCostPln = metrics && metrics.totalPallets > 0
+    ? Math.round(metrics.costIndividualPln * (userTotalPallets / metrics.totalPallets))
+    : 0;
+  const userCo2SavedKg = metrics && metrics.totalPallets > 0
+    ? Math.round(metrics.co2SavedKg * (userTotalPallets / metrics.totalPallets) * 10) / 10
+    : 0;
+  const poolPallets = visibleFarmers.reduce((s, f) => s + f.pallets, 0) + userTotalPallets;
+  const poolPct = Math.min(100, Math.round((poolPallets / TRUCK_CAPACITY) * 100));
+
+  // Insert userFarmer into milkRunRoute at cheapest position
+  const milkRun = routeData?.milkRunRoute ?? [];
+  const pool1Route: Array<{ lat: number; lng: number }> = (() => {
+    if (!userFarmer || milkRun.length === 0) return milkRun;
+    const u = { lat: userFarmer.lat, lng: userFarmer.lng, name: userFarmer.name };
+    const dist = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) =>
+      Math.hypot(a.lat - b.lat, a.lng - b.lng);
+    let bestCost = Infinity, bestIdx = 0;
+    for (let i = 0; i < milkRun.length - 1; i++) {
+      const cost = dist(milkRun[i], u) + dist(u, milkRun[i + 1]) - dist(milkRun[i], milkRun[i + 1]);
+      if (cost < bestCost) { bestCost = cost; bestIdx = i + 1; }
+    }
+    const result = [...milkRun];
+    result.splice(bestIdx, 0, u);
+    return result;
+  })();
+
+  if (!hydrated) return <BootScreen />;
+
+  // ── ACT 1 ─────────────────────────────────────────────────────────────────
+  if (act === 1) {
+    return (
+      <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
+        <div style={{ position: "absolute", inset: 0 }}><FieldBg /></div>
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(250,247,240,0.1) 0%, rgba(250,247,240,0.88) 50%, rgba(250,247,240,1) 100%)" }} />
+
+        <div style={{ position: "relative", zIndex: 2, maxWidth: "440px", width: "100%", padding: "1.5rem", textAlign: "center", marginTop: "auto" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", background: T.card, border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.3rem 0.9rem", marginBottom: "1.5rem" }}>
+            <span style={{ fontSize: "1rem" }}>🌾</span>
+            <span style={{ fontWeight: 800, fontSize: "0.85rem", color: T.accentHi }}>AgroPool</span>
+            <span style={{ fontSize: "0.65rem", color: T.subtle }}>· Powiat Kartuski</span>
+          </div>
+
+          <h1 style={{ fontSize: "clamp(1.6rem, 6vw, 2.2rem)", fontWeight: 900, color: T.text, lineHeight: 1.2, letterSpacing: "-0.02em", margin: "0 0 1rem" }}>
+            Masz 3 palety kapusty.<br />
+            <span style={{ color: "#b84030" }}>Nikt nie przyjedzie po tak mało.</span>
+          </h1>
+          <p style={{ color: T.muted, fontSize: "1rem", lineHeight: 1.6, margin: "0 0 0.75rem" }}>
+            Transport do Gdańska kosztuje więcej niż zarobisz. Towar gnije na polu.
+          </p>
+          <p style={{ color: T.accentHi, fontSize: "0.95rem", fontWeight: 700, margin: "0 0 2rem" }}>
+            AgroPool łączy rolników z tej samej gminy i wysyła jedną ciężarówkę.
+          </p>
+
+          <button onClick={() => setAct(2)} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.5rem", padding: "1.25rem 1rem", fontSize: "1.15rem", fontWeight: 900, cursor: "pointer", boxShadow: `0 8px 24px ${T.accent}55`, touchAction: "manipulation", width: "100%", marginBottom: "1rem" }}>
+            Zgłoś ładunek →
+          </button>
+          <a href="/przewoznik" style={{ color: T.muted, fontSize: "0.85rem", fontWeight: 600, textDecoration: "none", display: "block", textAlign: "center" }}>
+            Jestem przewoźnikiem
+          </a>
+        </div>
+        <div style={{ height: "10dvh" }} />
+      </div>
+    );
+  }
+
+  // ── ACT 2 ─────────────────────────────────────────────────────────────────
+  if (act === 2) {
+    const status = poolStatus();
+    const canSubmit = cropEntries.length > 0;
+    const inputBase: React.CSSProperties = {
+      background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.875rem",
+      color: T.text, width: "100%", padding: "0.875rem 1rem", fontSize: "1rem", outline: "none", boxSizing: "border-box",
+    };
+
+    const filteredCrops = cropSearch.trim()
+      ? crops.filter(c => c.toLowerCase().includes(cropSearch.toLowerCase()))
+      : crops;
+
+    function addCrop(crop: string) {
+      if (cropEntries.find(e => e.crop === crop)) return;
+      setCropEntries(prev => [...prev, { crop, pallets: 1 }]);
+      setCropSearch("");
+    }
+
+    function removeCrop(crop: string) {
+      setCropEntries(prev => prev.filter(e => e.crop !== crop));
+    }
+
+    function setPalletCount(crop: string, delta: number) {
+      setCropEntries(prev => prev.map(e =>
+        e.crop === crop ? { ...e, pallets: Math.max(1, Math.min(12, e.pallets + delta)) } : e
+      ));
+    }
+
+    return (
+      <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", color: T.text }}>
+        <div style={{ background: T.card, borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: "1rem", padding: "1rem 1.25rem", flexShrink: 0 }}>
+          <button onClick={() => setAct(1)} style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1 }}>←</button>
+          <div>
+            <div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>
+              {status === "joining" ? "Dołącz do puli" : "Zgłoś ładunek"}
+            </div>
+            <div style={{ fontSize: "0.7rem", color: T.subtle }}>
+              {status === "joining" ? `Rolnicy z ${selectedCommune.name} już czekają` : "Bądź pierwszy w swojej gminie"}
+            </div>
+          </div>
+          <div style={{ marginLeft: "auto" }}><OnlineBadge isOnline={isOnline} /></div>
         </div>
 
-        <h1 style={{ fontSize: "clamp(1.7rem, 6vw, 2.3rem)", fontWeight: 900, color: T.text, lineHeight: 1.2, letterSpacing: "-0.02em", margin: "0 0 0.75rem" }}>
-          Kim jesteś?
-        </h1>
-        <p style={{ color: T.muted, fontSize: "1rem", lineHeight: 1.6, margin: "0 0 2rem" }}>
-          Łączymy nadwyżki z pól z pustymi kursami i odbiorcami. Wybierz, kim jesteś.
-        </p>
+        <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem", maxWidth: "520px", width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <Link href="/rolnik" style={{ textDecoration: "none" }}>
-            <div style={{ background: T.accent, color: "#fff", borderRadius: "1.25rem", padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", gap: "1rem", boxShadow: `0 6px 20px ${T.accent}44`, textAlign: "left" }}>
-              <span style={{ fontSize: "2rem" }}>🌾</span>
-              <span>
-                <span style={{ display: "block", fontSize: "1.15rem", fontWeight: 900 }}>Jestem rolnikiem</span>
-                <span style={{ display: "block", fontSize: "0.8rem", opacity: 0.9 }}>Mam nadwyżkę plonów do oddania</span>
-              </span>
-              <span style={{ marginLeft: "auto", fontSize: "1.4rem", opacity: 0.8 }}>→</span>
-            </div>
-          </Link>
+          {/* Commune picker */}
+          <section>
+            <Label>Twoja gmina</Label>
+            <select
+              value={selectedCommune.code}
+              onChange={e => {
+                const c = TERYT_COMMUNES.find(c => c.code === Number(e.target.value));
+                if (c) setSelectedCommune(c);
+              }}
+              style={{ background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.875rem", color: T.text, width: "100%", padding: "0.875rem 1rem", fontSize: "1rem", outline: "none", boxSizing: "border-box", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a6a48' strokeWidth='1.5' fill='none' strokeLinecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 1rem center", paddingRight: "2.5rem" }}
+            >
+              {TERYT_COMMUNES.filter(c => c.powiat !== "Gdańsk").map(c => (
+                <option key={c.code} value={c.code}>{c.name} ({c.powiat})</option>
+              ))}
+            </select>
+          </section>
 
-          <Link href="/przewoznik" style={{ textDecoration: "none" }}>
-            <div style={{ background: T.card, color: T.text, border: `2px solid ${T.gold}`, borderRadius: "1.25rem", padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", gap: "1rem", textAlign: "left" }}>
-              <span style={{ fontSize: "2rem" }}>🚚</span>
-              <span>
-                <span style={{ display: "block", fontSize: "1.15rem", fontWeight: 900, color: T.gold }}>Jestem przewoźnikiem</span>
-                <span style={{ display: "block", fontSize: "0.8rem", color: T.muted }}>Jadę pusty, mam wolne miejsce</span>
-              </span>
-              <span style={{ marginLeft: "auto", fontSize: "1.4rem", color: T.gold, opacity: 0.8 }}>→</span>
-            </div>
-          </Link>
+          {/* Crop search + results */}
+          <section style={{ position: "relative" }}>
+            <Label>Co zbierasz?</Label>
+            <input
+              type="text"
+              placeholder={cropsLoading ? "Ładowanie upraw…" : "Szukaj uprawy…"}
+              value={cropSearch}
+              onChange={e => setCropSearch(e.target.value)}
+              disabled={cropsLoading}
+              style={{ ...inputBase }}
+            />
+            {cropsLoading ? (
+              <div style={{ textAlign: "center", padding: "1rem", color: T.subtle, fontSize: "0.85rem" }}>
+                <SpinIcon /> Ładowanie…
+              </div>
+            ) : cropSearch.trim() && filteredCrops.length === 0 ? (
+              <p style={{ color: T.subtle, fontSize: "0.85rem", margin: "0.5rem 0 0" }}>Brak wyników.</p>
+            ) : cropSearch.trim() ? (
+              <div style={{ position: "absolute", left: 0, right: 0, top: "calc(100% + 4px)", zIndex: 50, background: T.card, border: `1.5px solid ${T.border}`, borderRadius: "0.875rem", boxShadow: "0 8px 24px rgba(0,0,0,0.18)", maxHeight: "220px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.25rem", padding: "0.375rem" }}>
+                {filteredCrops.slice(0, 12).map(crop => {
+                  const added = !!cropEntries.find(e => e.crop === crop);
+                  return (
+                    <button key={crop} type="button" onMouseDown={e => { e.preventDefault(); addCrop(crop); }} disabled={added}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.625rem 0.875rem", borderRadius: "0.625rem", border: "none", background: added ? `${T.accent}18` : "transparent", cursor: added ? "default" : "pointer", touchAction: "manipulation", width: "100%" }}>
+                      <span style={{ fontSize: "0.9rem", fontWeight: 600, color: added ? T.accent : T.text }}>{capitalize(crop)}</span>
+                      <span style={{ fontSize: "1rem", color: added ? T.accent : T.subtle }}>{added ? "✓" : "+"}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </section>
 
-          <Link href="/dystrybutor" style={{ textDecoration: "none" }}>
-            <div style={{ background: T.card, color: T.text, border: `2px solid ${T.accentHi}`, borderRadius: "1.25rem", padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", gap: "1rem", textAlign: "left" }}>
-              <span style={{ fontSize: "2rem" }}>📦</span>
-              <span>
-                <span style={{ display: "block", fontSize: "1.15rem", fontWeight: 900, color: T.accentHi }}>Jestem dystrybutorem</span>
-                <span style={{ display: "block", fontSize: "0.8rem", color: T.muted }}>Chcę odebrać nadwyżki hurtem</span>
-              </span>
-              <span style={{ marginLeft: "auto", fontSize: "1.4rem", color: T.accentHi, opacity: 0.8 }}>→</span>
+          {/* Crop entries with per-crop pallet counter */}
+          {cropEntries.length > 0 && (
+            <section>
+              <Label>Moje uprawy</Label>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {cropEntries.map(entry => (
+                  <div key={entry.crop} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 0.875rem", background: T.card, border: `1.5px solid ${T.accent}55`, borderRadius: "0.875rem" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.9rem", color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{capitalize(entry.crop)}</div>
+                      <div style={{ fontSize: "0.68rem", color: T.subtle }}>≈ {(entry.pallets * 600).toLocaleString("pl-PL")} kg</div>
+                      {(() => {
+                        const ha = haMap[entry.crop] ?? 0;
+                        return ha > 0
+                          ? <div style={{ fontSize: "0.65rem", color: T.accent, marginTop: "0.15rem" }}>✓ ARiMR 2026: gmina {selectedCommune.name} · {ha.toFixed(2)} ha w ewidencji</div>
+                          : <div style={{ fontSize: "0.65rem", color: "#c87050", marginTop: "0.15rem" }}>⚠ ARiMR: uprawa nieewidencjonowana w tej gminie</div>;
+                      })()}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
+                      <button type="button" onClick={() => setPalletCount(entry.crop, -1)} disabled={entry.pallets <= 1}
+                        style={{ width: "36px", height: "36px", borderRadius: "0.5rem", border: `1.5px solid ${T.border}`, background: T.surface, color: entry.pallets <= 1 ? T.subtle : T.text, fontSize: "1.25rem", fontWeight: 900, cursor: entry.pallets <= 1 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", touchAction: "manipulation" }}>−</button>
+                      <span style={{ fontSize: "1.25rem", fontWeight: 900, color: T.accent, minWidth: "2ch", textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{entry.pallets}</span>
+                      <button type="button" onClick={() => setPalletCount(entry.crop, 1)} disabled={entry.pallets >= 12}
+                        style={{ width: "36px", height: "36px", borderRadius: "0.5rem", border: `1.5px solid ${T.border}`, background: T.surface, color: entry.pallets >= 12 ? T.subtle : T.text, fontSize: "1.25rem", fontWeight: 900, cursor: entry.pallets >= 12 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", touchAction: "manipulation" }}>+</button>
+                    </div>
+                    <button type="button" onClick={() => removeCrop(entry.crop)}
+                      style={{ width: "28px", height: "28px", borderRadius: "50%", border: `1.5px solid ${T.border}`, background: T.surface, color: T.muted, fontSize: "0.9rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, touchAction: "manipulation" }}>×</button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Location picker map */}
+          <section>
+            <Label>Miejsce odbioru</Label>
+            <LocationPicker
+              defaultLat={(selectedCommune.latMin + selectedCommune.latMax) / 2}
+              defaultLng={(selectedCommune.lngMin + selectedCommune.lngMax) / 2}
+              onPick={loc => {
+                setPickedLat(loc.lat);
+                setPickedLng(loc.lng);
+                setAddress(loc.address);
+              }}
+            />
+          </section>
+
+          {/* Contact fields */}
+          <section style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+            <Label>Dane kontaktowe</Label>
+            <input type="text" placeholder="Imię" value={farmerName} onChange={e => setFarmerName(e.target.value)} style={inputBase} />
+            <input type="tel" placeholder="Telefon (kierowca oddzwoni)" value={phone} onChange={e => setPhone(e.target.value)} style={inputBase} />
+          </section>
+
+          {canSubmit && (
+            <button type="button" onClick={handleSubmit} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.2rem", fontSize: "1.1rem", fontWeight: 900, cursor: "pointer", width: "100%", boxShadow: `0 6px 20px ${T.accent}44`, touchAction: "manipulation" }}>
+              {status === "joining" ? "Dołącz do puli" : "Zgłoś ładunek"}
+            </button>
+          )}
+
+          <div style={{ height: "1rem" }} />
+        </div>
+      </div>
+    );
+  }
+
+  // ── ACT 3 ─────────────────────────────────────────────────────────────────
+  const creator = allFarmers.find(f => f.isPoolCreator) ?? allFarmers[0] ?? null;
+
+  // Mock data for pool 2 and truck
+  const pool2Farmers = [
+    { id: "p2f1", name: "Ryszard Kaszubski", crop: "Ziemniaki",    pallets: 4, isCreator: true,  lat: 54.312, lng: 18.093, village: "Sierakowice" },
+    { id: "p2f2", name: "Bożena Struk",      crop: "Marchew",      pallets: 3, isCreator: false, lat: 54.371, lng: 18.193, village: "Stężyca" },
+    { id: "p2f3", name: "Henryk Formela",    crop: "Kapusta biała", pallets: 2, isCreator: false, lat: 54.362, lng: 18.082, village: "Somonino" },
+  ];
+  const truckStops = [
+    { lat: 54.295, lng: 18.062, name: "Start: Bytów (powrót)" },
+    { lat: 54.312, lng: 18.093, name: "Odbiór: Sierakowice · 3 pal." },
+    { lat: 54.328, lng: 18.154, name: "Odbiór: Kartuzy · 2 pal." },
+    { lat: 54.413, lng: 18.479, name: "Cel: Renk Gdańsk" },
+  ];
+  const pool2Pallets = pool2Farmers.reduce((s, f) => s + f.pallets, 0) + userTotalPallets;
+  const pool2Pct = Math.min(100, Math.round((pool2Pallets / TRUCK_CAPACITY) * 100));
+
+  // Per-pool map data
+  const activeMapPoints = selectedPool === 0
+    ? [
+        ...visibleFarmers.map(f => ({ lat: f.lat, lng: f.lng, name: f.name, isHub: false, isUser: false })),
+        ...(userFarmer ? [{ lat: userFarmer.lat, lng: userFarmer.lng, name: `${userFarmer.name} (Ty)`, isUser: true, isHub: false }] : []),
+        ...(hub && animStep >= 2 ? [{ lat: hub.lat, lng: hub.lng, name: hub.name, isHub: true, isUser: false }] : []),
+      ]
+    : selectedPool === 1
+    ? [
+        ...pool2Farmers.map(f => ({ lat: f.lat, lng: f.lng, name: f.name, isHub: false, isUser: false })),
+        ...(userFarmer ? [{ lat: userFarmer.lat, lng: userFarmer.lng, name: `${userFarmer.name} (Ty)`, isUser: true, isHub: false }] : []),
+        { lat: 54.413333, lng: 18.479376, name: "Renk Gdańsk", isHub: true, isUser: false },
+      ]
+    : truckStops.map((s, i) => ({ lat: s.lat, lng: s.lng, name: s.name, isHub: i === truckStops.length - 1, isUser: i === 0 }));
+
+  const activeRoute = selectedPool === 0
+    ? (animStep >= 2 ? pool1Route : undefined)
+    : selectedPool === 1
+    ? [...pool2Farmers.map(f => ({ lat: f.lat, lng: f.lng })), { lat: 54.413333, lng: 18.479376 }]
+    : truckStops.map(s => ({ lat: s.lat, lng: s.lng }));
+
+  function nextMonday(): string {
+    const d = new Date();
+    const daysUntil = (1 - d.getDay() + 7) % 7 || 7;
+    d.setDate(d.getDate() + daysUntil);
+    return d.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "short" });
+  }
+  function nextWednesday(): string {
+    const d = new Date();
+    const daysUntil = (3 - d.getDay() + 7) % 7 || 7;
+    d.setDate(d.getDate() + daysUntil);
+    return d.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "short" });
+  }
+
+  const POOL_TABS: { icon: string; label: string; sub: string; pallets: number; max: number; color: string }[] = [
+    { icon: "🌾", label: "Pula #1",      sub: nextThursday(),  pallets: poolPallets,  max: TRUCK_CAPACITY, color: T.accent },
+    { icon: "🌾", label: "Pula #2",      sub: nextMonday(),    pallets: pool2Pallets, max: TRUCK_CAPACITY, color: T.accent },
+    { icon: "🚛", label: "Ciężarówka",   sub: nextWednesday(), pallets: 6,            max: 18,             color: T.gold },
+    { icon: "➕", label: "Własna pula",  sub: "dowolna data",  pallets: 0,            max: TRUCK_CAPACITY, color: T.muted },
+  ];
+
+  const PoolDetail0 = (
+    <>
+      {/* Creator contact */}
+      {creator && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0.75rem", background: T.surface, borderRadius: "0.75rem", border: `1px solid ${T.border}`, marginBottom: "0.875rem" }}>
+          <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: T.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <span style={{ fontSize: "0.7rem", fontWeight: 900, color: "#fff" }}>{creator.name.charAt(0)}</span>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: T.text }}>{creator.name}</div>
+            <div style={{ fontSize: "0.68rem", color: T.subtle }}>Założył pulę</div>
+          </div>
+          <a href={`tel:${creator.phone.replace(/\s/g, "")}`}
+            style={{ display: "flex", alignItems: "center", gap: "0.3rem", padding: "0.375rem 0.75rem", background: T.accent, color: "#fff", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, textDecoration: "none", flexShrink: 0 }}>
+            Zadzwoń
+          </a>
+        </div>
+      )}
+      <CapacityBar current={poolPallets} max={TRUCK_CAPACITY} />
+      <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0.75rem 0 0.5rem" }}>
+        W puli ({visibleFarmers.length + (joinedPool === 0 && userFarmer ? 1 : 0)} rolników)
+      </div>
+      {joinedPool === 0 && userFarmer && (cropEntries.length > 0
+        ? cropEntries.map(e => <FarmerRow key={e.crop} name={userFarmer.name} crop={e.crop} pallets={e.pallets} isUser />)
+        : <FarmerRow name={userFarmer.name} crop={userFarmer.crop} pallets={userFarmer.pallets} isUser />
+      )}
+      {visibleFarmers.map(f => <FarmerRow key={f.id} name={f.name} crop={f.crop} pallets={f.pallets} isCreator={!!f.isPoolCreator} />)}
+      {joinedPool !== 0 && userFarmer && (
+        <button onClick={() => setJoinedPool(0)} style={{ width: "100%", marginTop: "0.5rem", padding: "0.75rem", borderRadius: "0.875rem", border: `1.5px dashed ${T.accent}`, background: "transparent", color: T.accent, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", touchAction: "manipulation" }}>
+          + Dołącz do tej puli
+        </button>
+      )}
+      {animStep >= 2 && metrics && joinedPool === 0 && (
+        <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: `1px solid ${T.border}` }}>
+          <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
+            Twój rachunek · cena rynkowa PL {metrics.priceSource === "ec-agridata" ? <span style={{ color: T.accent }}>live</span> : "szacunek"}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
+            <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena rynkowa PL" accent />
+            <StatBox label="Koszt frachtu" value={`${userTransportCostPln} zł`} sub={`${costPerPalletPln} zł/pal · vs ~${userIndividualCostPln} zł sam`} />
+            <StatBox label="CO₂ mniej" value={`${userCo2SavedKg} kg`} sub="Twój udział" />
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  const PoolDetail1 = (
+    <>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0.75rem", background: T.surface, borderRadius: "0.75rem", border: `1px solid ${T.border}`, marginBottom: "0.875rem" }}>
+        <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: T.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <span style={{ fontSize: "0.7rem", fontWeight: 900, color: "#fff" }}>R</span>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: "0.75rem", fontWeight: 700, color: T.text }}>Ryszard Kaszubski</div>
+          <div style={{ fontSize: "0.68rem", color: T.subtle }}>Założył pulę</div>
+        </div>
+        <a href="tel:+48506111222" style={{ padding: "0.375rem 0.75rem", background: T.accent, color: "#fff", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, textDecoration: "none" }}>Zadzwoń</a>
+      </div>
+      <CapacityBar current={pool2Pallets} max={TRUCK_CAPACITY} />
+      <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0.75rem 0 0.5rem" }}>
+        W puli ({pool2Farmers.length + (joinedPool === 1 && userFarmer ? 1 : 0)} rolników)
+      </div>
+      {joinedPool === 1 && userFarmer && (cropEntries.length > 0
+        ? cropEntries.map(e => <FarmerRow key={e.crop} name={userFarmer.name} crop={e.crop} pallets={e.pallets} isUser />)
+        : <FarmerRow name={userFarmer.name} crop={userFarmer.crop} pallets={userFarmer.pallets} isUser />
+      )}
+      {pool2Farmers.map(f => <FarmerRow key={f.id} name={f.name} crop={f.crop} pallets={f.pallets} isCreator={f.isCreator} />)}
+      {joinedPool !== 1 && userFarmer && (
+        <button onClick={() => setJoinedPool(1)} style={{ width: "100%", marginTop: "0.5rem", padding: "0.75rem", borderRadius: "0.875rem", border: `1.5px dashed ${T.accent}`, background: "transparent", color: T.accent, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", touchAction: "manipulation" }}>
+          + Dołącz do tej puli
+        </button>
+      )}
+      {joinedPool === 1 && userFarmer && (
+        <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: `1px solid ${T.border}` }}>
+          <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Twój rachunek · cena rynkowa PL</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
+            <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena rynkowa PL" accent />
+            <StatBox label="Koszt frachtu" value={`~${Math.round(userTransportCostPln * 0.85)} zł`} sub={`~${Math.round(costPerPalletPln * 0.85)} zł/pal · vs ~${userIndividualCostPln} zł sam`} />
+            <StatBox label="CO₂ mniej" value={`~${Math.round(userCo2SavedKg * 0.85)} kg`} sub="Twój udział" />
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  const PoolDetail2 = (
+    <>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.875rem", background: "#fdf8f0", borderRadius: "0.875rem", border: `1px solid ${T.gold}44`, marginBottom: "0.875rem" }}>
+        <span style={{ fontSize: "2rem" }}>🚛</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 800, fontSize: "0.9rem", color: T.text }}>Trans-Kaszuby Sp. z o.o.</div>
+          <div style={{ fontSize: "0.72rem", color: T.muted }}>Kierowca: Tomasz Nowak · +48 512 333 444</div>
+        </div>
+        <a href="tel:+48512333444" style={{ padding: "0.375rem 0.75rem", background: T.gold, color: "#fff", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, textDecoration: "none" }}>Zadzwoń</a>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "0.875rem" }}>
+        <StatBox label="Trasa" value="Kartuzy → Gdańsk" />
+        <StatBox label="Wolne palety" value="18 / 24" />
+        <StatBox label="Odjazd" value={nextWednesday()} />
+        <StatBox label="Typ" value="Backhaul TIR" />
+      </div>
+      <div style={{ padding: "0.75rem", background: "#f0faeb", border: "1px solid #b0d88a", borderRadius: "0.875rem", fontSize: "0.8rem", color: T.accent, fontWeight: 700, marginBottom: "0.75rem" }}>
+        🔄 Pusty przebieg → TIR wraca z Gdańska i zabierze Twój towar po drodze.
+      </div>
+      <CapacityBar current={joinedPool === 2 && userFarmer ? 6 + userTotalPallets : 6} max={18} color={T.gold} />
+      {joinedPool === 2 && userFarmer && (cropEntries.length > 0
+        ? cropEntries.map(e => <FarmerRow key={e.crop} name={userFarmer.name} crop={e.crop} pallets={e.pallets} isUser />)
+        : <FarmerRow name={userFarmer.name} crop={userFarmer.crop} pallets={userFarmer.pallets} isUser />
+      )}
+      {joinedPool !== 2 && userFarmer && (
+        <button onClick={() => setJoinedPool(2)} style={{ width: "100%", marginTop: "0.5rem", padding: "0.75rem", borderRadius: "0.875rem", border: `1.5px dashed ${T.gold}`, background: "transparent", color: T.gold, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", touchAction: "manipulation" }}>
+          + Zarezerwuj miejsce w ciężarówce
+        </button>
+      )}
+      {joinedPool === 2 && userFarmer && (
+        <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: `1px solid ${T.border}` }}>
+          <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Twój rachunek · kurs powrotny</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
+            <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena rynkowa PL" accent />
+            <StatBox label="Koszt frachtu" value={`~${Math.round(userTransportCostPln * 0.9)} zł`} sub={`~${Math.round(costPerPalletPln * 0.9)} zł/pal · kurs powrotny`} />
+            <StatBox label="CO₂ mniej" value={`~${Math.round(userCo2SavedKg * 1.2)} kg`} sub="kurs powrotny" />
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  const panelContent = (
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflowY: "auto" }}>
+      {/* Pool header */}
+      <div style={{ padding: "1rem 1.25rem 0.75rem", borderBottom: `1px solid ${T.border}` }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.625rem" }}>
+          <div>
+            <div style={{ fontWeight: 900, fontSize: "1rem", color: T.text }}>
+              {selectedPool === 2 ? "Ciężarówka · Backhaul" : `Pula · ${userFarmer?.village ?? creator?.village ?? "Kartuzy"}`}
             </div>
-          </Link>
+            <div style={{ fontSize: "0.72rem", color: T.subtle }}>
+              Zamknięcie: {selectedPool === 0 ? nextThursday() : selectedPool === 1 ? nextMonday() : nextWednesday()}, 23:59
+            </div>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", marginTop: "0.3rem", padding: "0.2rem 0.6rem", borderRadius: "999px", fontSize: "0.65rem", fontWeight: 700, background: "#f0faeb", border: "1px solid #b0d88a", color: T.accent }}>
+              <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: T.accent, display: "inline-block" }} />
+              Otwarta · Zbieranie zgłoszeń
+            </div>
+          </div>
+          <OnlineBadge isOnline={isOnline} />
         </div>
 
-        <p style={{ color: T.subtle, fontSize: "0.7rem", marginTop: "1.75rem" }}>
-          Offline-first · Mniej food waste · Mniej pustych kilometrów
-        </p>
+        {/* Pool tabs */}
+        <div style={{ display: "flex", gap: "0.4rem", overflowX: "auto", paddingBottom: "0.125rem" }}>
+          {POOL_TABS.map((tab, i) => {
+            const active = selectedPool === i;
+            const pct = Math.min(100, Math.round((tab.pallets / tab.max) * 100));
+            return (
+              <button key={i} type="button"
+                onClick={() => i === 3 ? (setAct(2), resetForm()) : setSelectedPool(i as 0|1|2)}
+                style={{ flexShrink: 0, minWidth: "80px", padding: "0.5rem 0.625rem", borderRadius: "0.75rem", border: `2px solid ${active ? tab.color : T.border}`, background: active ? (i === 2 ? "#fdf8f0" : "#f0faeb") : T.surface, cursor: "pointer", touchAction: "manipulation", textAlign: "left" }}>
+                <div style={{ fontSize: "0.75rem" }}>{tab.icon} <span style={{ fontWeight: 800, color: active ? tab.color : T.text }}>{tab.label}</span></div>
+                <div style={{ fontSize: "0.6rem", color: T.subtle, marginTop: "0.1rem" }}>{tab.sub}</div>
+                {i < 3 && (
+                  <div style={{ marginTop: "0.3rem", height: "3px", background: T.border, borderRadius: "999px", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${pct}%`, background: tab.color, borderRadius: "999px" }} />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Detail */}
+      <div style={{ padding: "0.875rem 1.25rem", flex: 1 }}>
+        {selectedPool === 0 && PoolDetail0}
+        {selectedPool === 1 && PoolDetail1}
+        {selectedPool === 2 && PoolDetail2}
+      </div>
+
+      {/* Actions */}
+      <div style={{ padding: "0.75rem 1.25rem", borderTop: `1px solid ${T.border}`, textAlign: "center" }}>
+        <button onClick={() => { setAct(2); resetForm(); }} style={{ background: "none", border: "none", color: T.muted, fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", touchAction: "manipulation" }}>
+          ← Zgłoś kolejny ładunek
+        </button>
       </div>
     </div>
+  );
+
+  // Desktop: full-screen map + overlaid side panel
+  if (!isMobile) {
+    return (
+      <div style={{ height: "100vh", position: "relative", overflow: "hidden" }}>
+        {/* Map — always full width */}
+        <Map key={`act3-pool${selectedPool}`} points={activeMapPoints} route={activeRoute} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} fitPadding={isMobile ? { top: 48, right: 48, bottom: Math.round(typeof window !== "undefined" ? window.innerHeight * 0.65 : 400), left: 48 } : { top: 48, right: 48 + 360, bottom: 48, left: 48 }} />
+
+        {/* Top-left logo */}
+        <div style={{ position: "absolute", top: "1rem", left: "1rem", zIndex: 500, background: "rgba(255,253,247,0.92)", border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.4rem 0.875rem", display: "flex", alignItems: "center", gap: "0.4rem", backdropFilter: "blur(6px)" }}>
+          <span>🌾</span>
+          <span style={{ fontWeight: 900, fontSize: "0.9rem", color: T.accentHi }}>AgroPool</span>
+        </div>
+
+        {/* Side panel — slides in from right, overlays map */}
+        <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "360px", zIndex: 500, background: T.card, borderLeft: `1px solid ${T.border}`, display: "flex", flexDirection: "column", transform: showPanel ? "translateX(0)" : "translateX(100%)", transition: "transform 0.5s cubic-bezier(0.34,1.2,0.64,1)", boxShadow: "-8px 0 32px rgba(0,0,0,0.12)" }}>
+          {panelContent}
+        </div>
+      </div>
+    );
+  }
+
+  // Mobile: full-screen map + bottom sheet
+  return (
+    <div style={{ height: "100dvh", position: "relative", overflow: "hidden" }}>
+      <div style={{ position: "absolute", inset: 0 }}>
+        <Map key={`act3-pool${selectedPool}`} points={activeMapPoints} route={activeRoute} isOnline={isOnline} focusPoint={userFarmer ? { lat: userFarmer.lat, lng: userFarmer.lng } : null} fitPadding={isMobile ? { top: 48, right: 48, bottom: Math.round(typeof window !== "undefined" ? window.innerHeight * 0.65 : 400), left: 48 } : { top: 48, right: 48 + 360, bottom: 48, left: 48 }} />
+      </div>
+
+      {/* Top bar */}
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 500, padding: "0.875rem 1rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "linear-gradient(to bottom, rgba(26,46,10,0.8) 0%, transparent 100%)" }}>
+        <span style={{ fontWeight: 900, fontSize: "1rem", color: "#e8f0d8" }}>🌾 AgroPool</span>
+        <OnlineBadge isOnline={isOnline} />
+      </div>
+
+      {/* Bottom sheet */}
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 500, transform: showPanel ? "translateY(0)" : "translateY(110%)", transition: "transform 0.5s cubic-bezier(0.34,1.4,0.64,1)", maxHeight: "65dvh", display: "flex", flexDirection: "column" }}>
+        <div style={{ background: T.card, borderRadius: "1.5rem 1.5rem 0 0", boxShadow: "0 -8px 40px rgba(0,0,0,0.25)", border: `1px solid ${T.border}`, flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div style={{ width: "40px", height: "4px", background: T.border, borderRadius: "999px", margin: "0.875rem auto 0" }} />
+          {panelContent}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Micro-components ──────────────────────────────────────────────────────────
+
+function FarmerRow({ name, crop, pallets, isUser, isCreator }: { name: string; crop: string; pallets: number; isUser?: boolean; isCreator?: boolean }) {
+  const avatarBg = isUser ? "#fffae8" : isCreator ? "#f0faeb" : T.surface;
+  const avatarBorder = isUser ? T.gold : isCreator ? T.accent : T.border;
+  const avatarColor = isUser ? T.gold : isCreator ? T.accent : T.muted;
+  const avatarLabel = isUser ? "TY" : name.charAt(0);
+  return (
+    <div style={{ display: "flex", alignItems: "center", padding: "0.5rem 0", borderBottom: `1px solid ${T.border}`, gap: "0.625rem" }}>
+      <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: avatarBg, border: `1.5px solid ${avatarBorder}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <span style={{ fontSize: "0.65rem", fontWeight: 800, color: avatarColor }}>{avatarLabel}</span>
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+          <span style={{ fontWeight: 700, fontSize: "0.85rem", color: isUser ? T.gold : T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {isUser ? "Ty" : name.split(" ")[0]}
+          </span>
+          {isCreator && <span style={{ fontSize: "0.58rem", fontWeight: 700, color: T.accent, background: "#e8f5e0", border: `1px solid ${T.accent}44`, borderRadius: "4px", padding: "0 4px" }}>założyciel</span>}
+        </div>
+        <div style={{ fontSize: "0.72rem", color: T.subtle }}>{capitalize(crop)}</div>
+      </div>
+      <div style={{ flexShrink: 0, textAlign: "right" }}>
+        <div style={{ fontWeight: 900, fontSize: "0.95rem", color: T.accent, fontVariantNumeric: "tabular-nums" }}>{pallets}</div>
+        <div style={{ fontSize: "0.6rem", color: T.subtle }}>pal.</div>
+      </div>
+    </div>
+  );
+}
+
+function StatBox({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
+  return (
+    <div style={{ background: accent ? "#f0faeb" : T.card, border: `1px solid ${accent ? "#b0d88a" : T.border}`, borderRadius: "0.625rem", padding: "0.5rem 0.625rem" }}>
+      <div style={{ fontSize: "0.6rem", color: T.subtle, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>
+      <div style={{ fontSize: "1rem", fontWeight: 900, color: accent ? T.accent : T.accentHi, fontVariantNumeric: "tabular-nums" }}>{value}</div>
+      {sub && <div style={{ fontSize: "0.6rem", color: T.subtle, marginTop: "0.1rem" }}>{sub}</div>}
+    </div>
+  );
+}
+
+function CapacityBar({ current, max, color }: { current: number; max: number; color?: string }) {
+  const pct = Math.min(100, Math.round((current / max) * 100));
+  const c = color ?? T.accentHi;
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: T.muted, marginBottom: "0.3rem" }}>
+        <span>{current} / {max} palet</span>
+        <span style={{ color: pct >= 100 ? c : T.subtle, fontWeight: 700 }}>{pct >= 100 ? "Gotowe!" : `jeszcze ${max - current}`}</span>
+      </div>
+      <div style={{ height: "8px", background: T.surface, borderRadius: "999px", overflow: "hidden", border: `1px solid ${T.border}` }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: c, borderRadius: "999px", transition: "width 0.6s ease" }} />
+      </div>
+    </div>
+  );
+}
+
+function Label({ children }: { children: React.ReactNode }) {
+  return <p style={{ color: T.muted, fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.5rem" }}>{children}</p>;
+}
+
+function CounterBtn({ onClick, disabled, children }: { onClick: () => void; disabled: boolean; children: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} style={{ width: "68px", height: "68px", borderRadius: "1rem", background: T.surface, border: `2px solid ${T.border}`, color: disabled ? T.subtle : T.text, fontSize: "2rem", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: disabled ? "not-allowed" : "pointer", flexShrink: 0, touchAction: "manipulation" }}>
+      {children}
+    </button>
+  );
+}
+
+function OnlineBadge({ isOnline }: { isOnline: boolean }) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.3rem 0.7rem", borderRadius: "999px", fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", background: isOnline ? "rgba(240,250,235,0.9)" : "rgba(253,240,235,0.9)", border: `1.5px solid ${isOnline ? T.accent : "#c87050"}`, color: isOnline ? T.accent : "#7a2808" }}>
+      <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: isOnline ? T.accent : "#c87050" }} />
+      {isOnline ? "Online" : "Offline"}
+    </span>
+  );
+}
+
+function SpinIcon() {
+  return <span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⏳</span>;
+}
+
+function BootScreen() {
+  return (
+    <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <span style={{ fontSize: "2.5rem" }}>🌾</span>
+    </div>
+  );
+}
+
+function FieldBg() {
+  return (
+    <svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" style={{ width: "100%", height: "100%" }} xmlns="http://www.w3.org/2000/svg">
+      <rect width="800" height="600" fill="#c8e8a8" />
+      <rect width="800" height="340" fill="#b8e0a0" />
+      <circle cx="660" cy="80" r="52" fill="#f5c842" opacity="0.7" />
+      <circle cx="660" cy="80" r="38" fill="#fde68a" opacity="0.85" />
+      <path d="M0,280 Q100,240 200,265 Q300,240 400,260 Q500,238 600,258 Q700,238 800,255 L800,600 L0,600 Z" fill="#90c860" />
+      <path d="M0,310 Q150,290 300,308 Q450,288 600,305 Q700,295 800,308 L800,600 L0,600 Z" fill="#78b848" />
+      <path d="M0,350 Q200,335 400,355 Q600,370 800,345 L800,600 L0,600 Z" fill="#68a838" />
+      {[0,1,2,3,4,5,6,7].map(i => <path key={i} d={`M${i*100},600 L${350+i*14},360`} stroke="#5a9428" strokeWidth="1.5" opacity="0.4" />)}
+      {[40,60,80,100,120].map((x,i) => <g key={x}><line x1={x} y1="440" x2={x+(i%2===0?-5:5)} y2={390-i*5} stroke="#9a8028" strokeWidth="2"/><ellipse cx={x+(i%2===0?-5:5)} cy={386-i*5} rx="5" ry="10" fill="#c8a030" opacity="0.85"/></g>)}
+      <rect x="250" y="280" width="160" height="100" fill="#8a3a1a" />
+      <polygon points="238,280 422,280 400,230 260,230" fill="#6a2810" />
+      <rect x="300" y="320" width="50" height="60" fill="#3a1a08" />
+      <rect x="270" y="290" width="30" height="24" rx="3" fill="#f5c842" opacity="0.2" />
+      <rect x="370" y="290" width="30" height="24" rx="3" fill="#f5c842" opacity="0.2" />
+      <rect x="430" y="240" width="44" height="140" rx="6" fill="#b0a080" />
+      <ellipse cx="452" cy="240" rx="22" ry="9" fill="#d4c8a0" />
+      {[260,285,310,335].map(y => <line key={y} x1="430" y1={y} x2="474" y2={y} stroke="#9a8860" strokeWidth="1.5" opacity="0.6"/>)}
+      <line x1="570" y1="400" x2="570" y2="240" stroke="#8a7a50" strokeWidth="5" />
+      <circle cx="570" cy="300" r="12" fill="#4a7c2f" />
+      <line x1="540" y1="300" x2="600" y2="300" stroke="#4a7c2f" strokeWidth="4" />
+      <line x1="570" y1="270" x2="570" y2="330" stroke="#4a7c2f" strokeWidth="4" />
+      <polygon points="540,300 547,294 547,306" fill="#3a6a22" />
+      <polygon points="600,300 593,294 593,306" fill="#3a6a22" />
+      <polygon points="570,270 564,277 576,277" fill="#3a6a22" />
+      <polygon points="570,330 564,323 576,323" fill="#3a6a22" />
+      {[650,670,690,710,730].map((x,i) => <g key={x}><line x1={x} y1="430" x2={x+(i%2===0?4:-4)} y2={385-i*4} stroke="#9a8028" strokeWidth="2"/><ellipse cx={x+(i%2===0?4:-4)} cy={381-i*4} rx="5" ry="10" fill="#c8a030" opacity="0.85"/></g>)}
+    </svg>
   );
 }

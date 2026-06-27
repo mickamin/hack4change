@@ -16,13 +16,18 @@ interface MapProps {
   isOnline: boolean;
   focusPoint?: { lat: number; lng: number } | null;
   route?: Array<{ lat: number; lng: number }>;
+  fitPadding?: { top: number; right: number; bottom: number; left: number };
 }
 
-export default function Map({ points, isOnline, focusPoint, route }: MapProps) {
+export default function Map({ points, isOnline, focusPoint, route, fitPadding }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapInstanceRef = useRef<any>(null);
   const routeDrawnRef = useRef(false);
+  const routeRef = useRef(route);
+  const pointsRef = useRef(points);
+  useEffect(() => { routeRef.current = route; }, [route]);
+  useEffect(() => { pointsRef.current = points; }, [points]);
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
@@ -45,8 +50,19 @@ export default function Map({ points, isOnline, focusPoint, route }: MapProps) {
       }).addTo(map);
 
       mapInstanceRef.current = { map, L };
-      setTimeout(() => map.invalidateSize(), 200);
-      setTimeout(() => map.invalidateSize(), 600);
+      setTimeout(() => { try { map.invalidateSize(); } catch { /* unmounted */ } }, 200);
+      setTimeout(() => {
+        try { map.invalidateSize(); } catch { return; }
+        // Render markers if already set before leaflet finished loading
+        const pts = pointsRef.current;
+        if (pts && pts.length > 0) renderMarkers(L, map, pts);
+        // Draw route if already set before leaflet finished loading
+        const r = routeRef.current;
+        if (r && r.length >= 2 && !routeDrawnRef.current) {
+          routeDrawnRef.current = true;
+          fetchAndDrawRoute(L, map, r);
+        }
+      }, 600);
     });
 
     return () => {
@@ -123,9 +139,15 @@ export default function Map({ points, isOnline, focusPoint, route }: MapProps) {
     const blue = L.polyline(latLngs, { color: "#1a6fc4", weight: 6, opacity: 1, lineJoin: "round" }).addTo(map);
     const dash = L.polyline(latLngs, { color: "#fff", weight: 2, dashArray: "12, 10", opacity: 0.7, lineJoin: "round" }).addTo(map);
 
-    // Fit map to show full route
+    // Fit map to show full route, respecting panel offsets
     const bounds = L.latLngBounds(latLngs);
-    map.fitBounds(bounds, { padding: [48, 48], animate: true, duration: 1.0 });
+    const p = fitPadding ?? { top: 48, right: 48, bottom: 48, left: 48 };
+    map.fitBounds(bounds, {
+      paddingTopLeft: [p.left, p.top],
+      paddingBottomRight: [p.right, p.bottom],
+      animate: true,
+      duration: 1.0,
+    });
 
     // Animate both layers via stroke-dashoffset
     [blue, dash].forEach(poly => {

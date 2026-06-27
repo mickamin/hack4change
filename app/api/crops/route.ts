@@ -41,8 +41,14 @@ export async function GET(request: Request) {
     }
 
     const availableCrops = Object.keys(cropMap).sort();
+    const haMap: Record<string, number> = {};
+    for (const [col, val] of Object.entries(data)) {
+      if (META_COLS.has(col)) continue;
+      const ha = parseFloat(val as string);
+      if (!isNaN(ha) && ha > 0) haMap[col.replace(/_/g, " ")] = ha;
+    }
 
-    return NextResponse.json({ terytCode: terytStr, availableCrops, cropMap, source: "supabase" });
+    return NextResponse.json({ terytCode: terytStr, availableCrops, cropMap, haMap, source: "supabase" });
   }
 
   // Fallback to mock data
@@ -54,10 +60,15 @@ export async function GET(request: Request) {
     .map(([crop]) => crop)
     .sort();
 
+  const fallbackHaMap: Record<string, number> = Object.fromEntries(
+    Object.entries(fallback.ha).filter(([, v]) => v > 0)
+  );
+
   return NextResponse.json({
     terytCode: terytStr,
     availableCrops,
     cropMap: fallback.crops,
+    haMap: fallbackHaMap,
     source: "mock",
     ...(error ? { supabaseError: error.message } : {}),
   });
