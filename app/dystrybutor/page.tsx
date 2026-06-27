@@ -15,6 +15,8 @@ const T = {
 };
 
 type Act = 1 | 2 | 3;
+type Unit = "palety" | "kg";
+interface SelectedCrop { name: string; qty: number; unit: Unit }
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -30,11 +32,10 @@ export default function DystrybutorPage() {
   const [act, setAct] = useState<Act>(2);
 
   const [name, setName] = useState("");
-  const [crop, setCrop] = useState("");
   const [allCrops, setAllCrops] = useState<string[]>([]);
   const [cropsLoading, setCropsLoading] = useState(false);
   const [cropSearch, setCropSearch] = useState("");
-  const [needed, setNeeded] = useState(20);
+  const [selectedCrops, setSelectedCrops] = useState<SelectedCrop[]>([]);
   const [near, setNear] = useState<TerytCommune>(TERYT_COMMUNES[0]);
 
   const [result, setResult] = useState<DistributorResult | null>(null);
@@ -45,43 +46,60 @@ export default function DystrybutorPage() {
     setCropsLoading(true);
     fetch("/api/crops/all")
       .then((r) => r.json())
-      .then((json) => {
-        const list: string[] = json.availableCrops ?? [];
-        setAllCrops(list);
-        if (list.length > 0 && !crop) setCrop(list[0]);
-      })
+      .then((json) => { setAllCrops(json.availableCrops ?? []); })
       .catch(() => setAllCrops([]))
       .finally(() => setCropsLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const filteredCrops = cropSearch.trim()
+    ? allCrops.filter((c) => c.toLowerCase().includes(cropSearch.toLowerCase()))
+    : [];
+
+  function addCrop(crop: string) {
+    if (!selectedCrops.find((s) => s.name === crop)) {
+      setSelectedCrops((prev) => [...prev, { name: crop, qty: 10, unit: "palety" }]);
+    }
+    setCropSearch("");
+  }
+
+  function removeCrop(crop: string) {
+    setSelectedCrops((prev) => prev.filter((s) => s.name !== crop));
+  }
+
+  function updateCrop(crop: string, patch: Partial<SelectedCrop>) {
+    setSelectedCrops((prev) => prev.map((s) => s.name === crop ? { ...s, ...patch } : s));
+  }
+
   async function handleSubmit() {
+    if (selectedCrops.length === 0) return;
     setLoading(true);
+    const first = selectedCrops[0];
+    const neededPallets = first.unit === "palety" ? first.qty : Math.ceil(first.qty / 600);
     try {
       const res = await fetch("/api/distributors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           distributorName: name,
-          crop,
-          neededPallets: needed,
+          crop: first.name,
+          neededPallets,
           near: communeCentroid(near),
           nearLabel: near.name,
         }),
       });
       const raw = (await res.json()) as Partial<DistributorResult>;
       setResult({
-        crop: raw.crop ?? crop as import("@/app/api/data/mockData").CropKey,
+        crop: raw.crop ?? first.name as import("@/app/api/data/mockData").CropKey,
         matches: Array.isArray(raw.matches) ? raw.matches : [],
         gatheredPallets: raw.gatheredPallets ?? 0,
-        neededPallets: raw.neededPallets ?? needed,
+        neededPallets: raw.neededPallets ?? neededPallets,
         fillPct: raw.fillPct ?? 0,
         estValuePln: raw.estValuePln ?? 0,
         nearLabel: raw.nearLabel ?? near.name,
       });
       setAct(3);
     } catch {
-      setResult({ crop: crop as import("@/app/api/data/mockData").CropKey, matches: [], gatheredPallets: 0, neededPallets: needed, fillPct: 0, estValuePln: 0, nearLabel: near.name });
+      setResult({ crop: first.name as import("@/app/api/data/mockData").CropKey, matches: [], gatheredPallets: 0, neededPallets, fillPct: 0, estValuePln: 0, nearLabel: near.name });
       setAct(3);
     } finally {
       setLoading(false);
@@ -89,7 +107,7 @@ export default function DystrybutorPage() {
   }
 
   if (!hydrated) {
-    return <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: "2.5rem" }}>📦</span></div>;
+    return <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: "1.2rem", color: T.muted, fontWeight: 700 }}>Ladowanie...</span></div>;
   }
 
   // ── AKT 1 ───────────────────────────────────────────────────────────────────
@@ -97,15 +115,9 @@ export default function DystrybutorPage() {
     return (
       <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
         <div style={{ maxWidth: "440px", width: "100%", textAlign: "center" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", background: T.card, border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.3rem 0.9rem", marginBottom: "1.5rem" }}>
-            <span>📦</span><span style={{ fontWeight: 800, fontSize: "0.85rem", color: T.accentHi }}>AgroPool</span><span style={{ fontSize: "0.65rem", color: T.subtle }}>· dla dystrybutorów</span>
-          </div>
           <h1 style={{ fontSize: "clamp(1.6rem, 6vw, 2.2rem)", fontWeight: 900, color: T.text, lineHeight: 1.2, letterSpacing: "-0.02em", margin: "0 0 1rem" }}>
-            Szukasz towaru hurtem?<br /><span style={{ color: T.accentHi }}>Zbierz nadwyżki z regionu.</span>
+            Szukasz towaru hurtem?<br /><span style={{ color: T.accentHi }}>Zbierz nadwyzki z regionu.</span>
           </h1>
-          <p style={{ color: T.muted, fontSize: "1rem", lineHeight: 1.6, margin: "0 0 2rem" }}>
-            Powiedz czego potrzebujesz i ile — pokażemy gminy z dostępną uprawą, od najbliższej.
-          </p>
           <button onClick={() => setAct(2)} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.1rem 2.5rem", fontSize: "1.15rem", fontWeight: 900, cursor: "pointer", width: "100%", boxShadow: `0 6px 20px ${T.accent}55` }}>
             Jestem dystrybutorem
           </button>
@@ -117,16 +129,17 @@ export default function DystrybutorPage() {
   // ── AKT 2 ───────────────────────────────────────────────────────────────────
   if (act === 2) {
     const inputBase: React.CSSProperties = { background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.875rem", color: T.text, width: "100%", padding: "0.875rem 1rem", fontSize: "1rem", outline: "none", boxSizing: "border-box" };
+    const canSubmit = selectedCrops.length > 0 && !loading;
     return (
       <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", color: T.text }}>
         <div style={{ background: T.card, borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: "1rem", padding: "1rem 1.25rem" }}>
           <a href="/" style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1, textDecoration: "none" }}>&#8592;</a>
-          <div><div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>Czego potrzebujesz</div><div style={{ fontSize: "0.7rem", color: T.subtle }}>Produkt, ilość i miejsce dostawy</div></div>
+          <div><div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>Czego potrzebujesz</div><div style={{ fontSize: "0.7rem", color: T.subtle }}>Produkt, ilosc i miejsce dostawy</div></div>
           <div style={{ marginLeft: "auto" }}><OnlineBadge isOnline={isOnline} /></div>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem", maxWidth: "520px", width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          {/* Crop search */}
+          {/* Crop search — identical to rolnik */}
           <section>
             <Label>Jaki produkt</Label>
             <input
@@ -139,44 +152,61 @@ export default function DystrybutorPage() {
             />
             {cropsLoading ? (
               <div style={{ textAlign: "center", padding: "1rem", color: T.subtle, fontSize: "0.85rem" }}>Ladowanie...</div>
-            ) : (
+            ) : cropSearch.trim() && filteredCrops.length === 0 ? (
+              <p style={{ color: T.subtle, fontSize: "0.85rem", margin: 0 }}>Brak wynikow.</p>
+            ) : cropSearch.trim() ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", maxHeight: "200px", overflowY: "auto" }}>
-                {(cropSearch.trim()
-                  ? allCrops.filter((c) => c.toLowerCase().includes(cropSearch.toLowerCase()))
-                  : allCrops
-                ).slice(0, 12).map((c) => {
-                  const active = crop === c;
+                {filteredCrops.slice(0, 12).map((c) => {
+                  const added = selectedCrops.some((s) => s.name === c);
                   return (
-                    <button key={c} type="button" onClick={() => { setCrop(c); setCropSearch(""); }}
-                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.625rem 0.875rem", borderRadius: "0.75rem", border: `1.5px solid ${active ? T.accent : T.border}`, background: active ? "#f0faeb" : T.surface, cursor: "pointer", touchAction: "manipulation" }}>
-                      <span style={{ fontSize: "0.9rem", fontWeight: 600, color: active ? T.accent : T.text }}>{capitalize(c)}</span>
-                      <span style={{ fontSize: "1rem", color: active ? T.accent : T.subtle }}>{active ? "v" : ""}</span>
+                    <button key={c} type="button" onClick={() => addCrop(c)}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.625rem 0.875rem", borderRadius: "0.75rem", border: `1.5px solid ${added ? T.accent : T.border}`, background: added ? "#f0faeb" : T.surface, cursor: "pointer", touchAction: "manipulation" }}>
+                      <span style={{ fontSize: "0.9rem", fontWeight: 600, color: added ? T.accent : T.text }}>{capitalize(c)}</span>
+                      <span style={{ fontSize: "1rem", color: added ? T.accent : T.subtle }}>{added ? "v" : "+"}</span>
                     </button>
                   );
                 })}
-                {cropSearch.trim() && allCrops.filter((c) => c.toLowerCase().includes(cropSearch.toLowerCase())).length === 0 && (
-                  <p style={{ color: T.subtle, fontSize: "0.85rem", margin: 0 }}>Brak wynikow.</p>
-                )}
               </div>
-            )}
-            {crop && (
-              <div style={{ marginTop: "0.5rem", padding: "0.5rem 0.75rem", background: "#f0faeb", border: `1.5px solid ${T.accent}55`, borderRadius: "0.75rem", fontSize: "0.85rem", fontWeight: 700, color: T.accent }}>
-                Wybrany: {capitalize(crop)}
-              </div>
-            )}
+            ) : null}
           </section>
 
-          <section>
-            <Label>Ile palet potrzebujesz</Label>
-            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-              <CounterBtn onClick={() => setNeeded((p) => Math.max(5, p - 5))} disabled={needed <= 5}>-</CounterBtn>
-              <div style={{ flex: 1, textAlign: "center" }}>
-                <div style={{ fontSize: "3.5rem", fontWeight: 900, color: T.accent, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{needed}</div>
-                <div style={{ fontSize: "0.7rem", color: T.subtle, marginTop: "0.2rem" }}>palet</div>
+          {/* Selected crops with qty + unit toggle */}
+          {selectedCrops.length > 0 && (
+            <section>
+              <Label>Moje zamowienia</Label>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                {selectedCrops.map((sc) => (
+                  <div key={sc.name} style={{ padding: "0.875rem", background: T.card, border: `1.5px solid ${T.accent}55`, borderRadius: "0.875rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.625rem" }}>
+                      <div style={{ flex: 1, fontWeight: 700, fontSize: "0.9rem", color: T.text }}>{capitalize(sc.name)}</div>
+                      <button type="button" onClick={() => removeCrop(sc.name)}
+                        style={{ width: "28px", height: "28px", borderRadius: "50%", border: `1.5px solid ${T.border}`, background: T.surface, color: T.muted, fontSize: "0.9rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, touchAction: "manipulation" }}>x</button>
+                    </div>
+                    {/* Unit toggle */}
+                    <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.625rem" }}>
+                      {(["palety", "kg"] as Unit[]).map((u) => (
+                        <button key={u} type="button" onClick={() => updateCrop(sc.name, { unit: u, qty: u === "palety" ? 10 : 1000 })}
+                          style={{ flex: 1, padding: "0.5rem", borderRadius: "0.625rem", border: `1.5px solid ${sc.unit === u ? T.accent : T.border}`, background: sc.unit === u ? "#f0faeb" : T.surface, color: sc.unit === u ? T.accent : T.muted, fontSize: "0.8rem", fontWeight: 700, cursor: "pointer", touchAction: "manipulation" }}>
+                          {u === "palety" ? "Palety" : "Kilogramy"}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Qty counter */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                      <button type="button" onClick={() => updateCrop(sc.name, { qty: Math.max(sc.unit === "palety" ? 1 : 100, sc.qty - (sc.unit === "palety" ? 1 : 100)) })}
+                        style={{ width: "44px", height: "44px", borderRadius: "0.75rem", background: T.surface, border: `1.5px solid ${T.border}`, color: T.text, fontSize: "1.3rem", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, touchAction: "manipulation" }}>-</button>
+                      <div style={{ flex: 1, textAlign: "center" }}>
+                        <div style={{ fontSize: "2rem", fontWeight: 900, color: T.accent, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{sc.qty}</div>
+                        <div style={{ fontSize: "0.65rem", color: T.subtle, marginTop: "0.15rem" }}>{sc.unit === "palety" ? "palet" : "kg"}</div>
+                      </div>
+                      <button type="button" onClick={() => updateCrop(sc.name, { qty: Math.min(sc.unit === "palety" ? 200 : 50000, sc.qty + (sc.unit === "palety" ? 1 : 100)) })}
+                        style={{ width: "44px", height: "44px", borderRadius: "0.75rem", background: T.surface, border: `1.5px solid ${T.border}`, color: T.text, fontSize: "1.3rem", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, touchAction: "manipulation" }}>+</button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <CounterBtn onClick={() => setNeeded((p) => Math.min(100, p + 5))} disabled={needed >= 100}>+</CounterBtn>
-            </div>
-          </section>
+            </section>
+          )}
 
           {/* Commune dropdown */}
           <section>
@@ -200,8 +230,8 @@ export default function DystrybutorPage() {
             <input type="text" placeholder="np. Hurtownia Kaszuby" value={name} onChange={(e) => setName(e.target.value)} style={inputBase} />
           </section>
 
-          <button type="button" onClick={handleSubmit} disabled={loading} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.2rem", fontSize: "1.1rem", fontWeight: 900, cursor: loading ? "wait" : "pointer", width: "100%", boxShadow: `0 6px 20px ${T.accent}44`, opacity: loading ? 0.7 : 1 }}>
-            {loading ? "Szukam dostawców…" : "Znajdź dostawców"}
+          <button type="button" onClick={handleSubmit} disabled={!canSubmit} style={{ background: canSubmit ? T.accent : T.subtle, color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.2rem", fontSize: "1.1rem", fontWeight: 900, cursor: canSubmit ? "pointer" : "not-allowed", width: "100%", boxShadow: canSubmit ? `0 6px 20px ${T.accent}44` : "none", opacity: loading ? 0.7 : 1 }}>
+            {loading ? "Szukam dostawcow..." : "Znajdz dostawcow"}
           </button>
           <div style={{ height: "1rem" }} />
         </div>
@@ -221,7 +251,7 @@ export default function DystrybutorPage() {
   return (
     <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", color: T.text }}>
       <div style={{ background: T.card, borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: "1rem", padding: "0.875rem 1.25rem" }}>
-        <button onClick={() => setAct(2)} style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1 }}>←</button>
+        <button onClick={() => setAct(2)} style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1 }}>&#8592;</button>
         <div><div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>{r.crop}</div><div style={{ fontSize: "0.7rem", color: T.subtle }}>dostawa: {r.nearLabel}</div></div>
         <div style={{ marginLeft: "auto" }}><OnlineBadge isOnline={isOnline} /></div>
       </div>
@@ -243,7 +273,7 @@ export default function DystrybutorPage() {
 
         {r.matches.length === 0 ? (
           <div style={{ background: "#fdf4e6", border: `1px solid ${T.gold}`, borderRadius: "0.875rem", padding: "1rem", fontSize: "0.9rem" }}>
-            Brak „{r.crop}" w regionie na teraz. Spróbuj innego produktu.
+            Brak "{r.crop}" w regionie na teraz. Sprobuj innego produktu.
           </div>
         ) : (
           <>
@@ -252,7 +282,7 @@ export default function DystrybutorPage() {
             </div>
             {r.matches.map((m) => (
               <div key={m.terytCode} style={{ display: "flex", alignItems: "center", padding: "0.6rem 0", borderBottom: `1px solid ${T.border}`, gap: "0.7rem" }}>
-                <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: T.surface, border: `1.5px solid ${T.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "0.8rem" }}>📍</div>
+                <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: T.surface, border: `1.5px solid ${T.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "0.75rem", fontWeight: 700, color: T.muted }}>G</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: "0.9rem", color: T.text }}>{m.commune}</div>
                   <div style={{ fontSize: "0.72rem", color: T.subtle }}>{m.distanceKm} km od dostawy</div>
@@ -269,7 +299,7 @@ export default function DystrybutorPage() {
                 {r.gatheredPallets} palet {r.crop.toLowerCase()} z {r.matches.length} gmin
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
-                <StatBox label="Szac. wartość" value={`${r.estValuePln.toLocaleString("pl-PL")} zł`} />
+                <StatBox label="Szac. wartosc" value={`${r.estValuePln.toLocaleString("pl-PL")} zl`} />
                 <StatBox label="Pokrycie" value={`${r.fillPct}%`} />
               </div>
             </div>
@@ -296,14 +326,6 @@ function StatBox({ label, value }: { label: string; value: string }) {
 
 function Label({ children }: { children: React.ReactNode }) {
   return <p style={{ color: T.muted, fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.5rem" }}>{children}</p>;
-}
-
-function CounterBtn({ onClick, disabled, children }: { onClick: () => void; disabled: boolean; children: React.ReactNode }) {
-  return (
-    <button type="button" onClick={onClick} disabled={disabled} style={{ width: "68px", height: "68px", borderRadius: "1rem", background: T.surface, border: `2px solid ${T.border}`, color: disabled ? T.subtle : T.text, fontSize: "2rem", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: disabled ? "not-allowed" : "pointer", flexShrink: 0 }}>
-      {children}
-    </button>
-  );
 }
 
 function OnlineBadge({ isOnline }: { isOnline: boolean }) {
