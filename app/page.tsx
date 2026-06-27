@@ -50,6 +50,7 @@ export default function App() {
   const [selectedCommune, setSelectedCommune] = useState(TERYT_COMMUNES[0]);
   const [crops, setCrops]               = useState<string[]>([]);
   const [cropsLoading, setCropsLoading] = useState(false);
+  const [haMap, setHaMap]               = useState<Record<string, number>>({});
   const [cropEntries, setCropEntries]   = useState<{crop: string; pallets: number}[]>([]);
   const [cropSearch, setCropSearch]     = useState("");
   const [farmerName, setFarmerName]     = useState("");
@@ -113,6 +114,7 @@ export default function App() {
         if (cancelled) return;
         const list: string[] = json.availableCrops ?? [];
         setCrops(list);
+        setHaMap(json.haMap ?? {});
       })
       .catch(() => { if (!cancelled) setCrops([]); })
       .finally(() => { if (!cancelled) setCropsLoading(false); });
@@ -311,7 +313,7 @@ export default function App() {
           </section>
 
           {/* Crop search + results */}
-          <section>
+          <section style={{ position: "relative" }}>
             <Label>Co zbierasz?</Label>
             <input
               type="text"
@@ -319,21 +321,21 @@ export default function App() {
               value={cropSearch}
               onChange={e => setCropSearch(e.target.value)}
               disabled={cropsLoading}
-              style={{ ...inputBase, marginBottom: "0.625rem" }}
+              style={{ ...inputBase }}
             />
             {cropsLoading ? (
               <div style={{ textAlign: "center", padding: "1rem", color: T.subtle, fontSize: "0.85rem" }}>
                 <SpinIcon /> Ładowanie…
               </div>
             ) : cropSearch.trim() && filteredCrops.length === 0 ? (
-              <p style={{ color: T.subtle, fontSize: "0.85rem", margin: 0 }}>Brak wyników.</p>
+              <p style={{ color: T.subtle, fontSize: "0.85rem", margin: "0.5rem 0 0" }}>Brak wyników.</p>
             ) : cropSearch.trim() ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", maxHeight: "200px", overflowY: "auto" }}>
+              <div style={{ position: "absolute", left: 0, right: 0, top: "calc(100% + 4px)", zIndex: 50, background: T.card, border: `1.5px solid ${T.border}`, borderRadius: "0.875rem", boxShadow: "0 8px 24px rgba(0,0,0,0.18)", maxHeight: "220px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.25rem", padding: "0.375rem" }}>
                 {filteredCrops.slice(0, 12).map(crop => {
                   const added = !!cropEntries.find(e => e.crop === crop);
                   return (
-                    <button key={crop} type="button" onClick={() => addCrop(crop)} disabled={added}
-                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.625rem 0.875rem", borderRadius: "0.75rem", border: `1.5px solid ${added ? T.accent : T.border}`, background: added ? "#f0faeb" : T.surface, cursor: added ? "default" : "pointer", touchAction: "manipulation" }}>
+                    <button key={crop} type="button" onMouseDown={e => { e.preventDefault(); addCrop(crop); }} disabled={added}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.625rem 0.875rem", borderRadius: "0.625rem", border: "none", background: added ? `${T.accent}18` : "transparent", cursor: added ? "default" : "pointer", touchAction: "manipulation", width: "100%" }}>
                       <span style={{ fontSize: "0.9rem", fontWeight: 600, color: added ? T.accent : T.text }}>{capitalize(crop)}</span>
                       <span style={{ fontSize: "1rem", color: added ? T.accent : T.subtle }}>{added ? "✓" : "+"}</span>
                     </button>
@@ -354,8 +356,7 @@ export default function App() {
                       <div style={{ fontWeight: 700, fontSize: "0.9rem", color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{capitalize(entry.crop)}</div>
                       <div style={{ fontSize: "0.68rem", color: T.subtle }}>≈ {(entry.pallets * 600).toLocaleString("pl-PL")} kg</div>
                       {(() => {
-                        const availability = CROP_AVAILABILITY.find(a => a.terytCode === selectedCommune.code);
-                        const ha = availability?.ha[entry.crop as CropKey] ?? 0;
+                        const ha = haMap[entry.crop] ?? 0;
                         return ha > 0
                           ? <div style={{ fontSize: "0.65rem", color: T.accent, marginTop: "0.15rem" }}>✓ ARiMR 2026: gmina {selectedCommune.name} · {ha.toFixed(2)} ha w ewidencji</div>
                           : <div style={{ fontSize: "0.65rem", color: "#c87050", marginTop: "0.15rem" }}>⚠ ARiMR: uprawa nieewidencjonowana w tej gminie</div>;
