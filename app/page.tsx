@@ -67,8 +67,8 @@ export default function App() {
   const [countedFarmers, setCountedFarmers] = useState(0);
   const [animStep, setAnimStep]         = useState(0);
   const [selectedPool, setSelectedPool] = useState<0|1|2|3>(0);
-  // which pool the user joined: 0=own pool, 1=pool2, 2=truck, 3=none yet
-  const [joinedPool, setJoinedPool]     = useState<0|1|2|null>(null);
+  // null = not joined yet; 0=pula1, 1=pula2, 2=ciezarowka, 'own'=stworzona wlasna
+  const [joinedPool, setJoinedPool]     = useState<0|1|2|"own"|null>(null);
 
   useEffect(() => {
     setHydrated(true);
@@ -143,7 +143,7 @@ export default function App() {
     }));
     farmers.forEach(f => enqueue(f));
     setUserFarmer(farmers[0]);
-    setJoinedPool(0);
+    setJoinedPool(null);
     // Fetch live prices for user's actual crops (bypasses routeData pricesMap cache)
     fetch("/api/prices").then(r => r.json()).then(json => {
       const map: Record<string, number> = {};
@@ -606,6 +606,62 @@ export default function App() {
     </>
   );
 
+  const PoolDetail3 = (
+    <>
+      {joinedPool !== "own" ? (
+        <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
+          <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>➕</div>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: T.text, marginBottom: "0.5rem" }}>Stwórz własną pulę</div>
+          <div style={{ fontSize: "0.85rem", color: T.muted, marginBottom: "1.25rem", lineHeight: 1.5 }}>
+            Będziesz założycielem puli. Inni rolnicy z okolicy mogą dołączyć.
+          </div>
+          {userFarmer ? (
+            <button onClick={() => { setJoinedPool("own"); }} style={{ width: "100%", padding: "0.875rem", borderRadius: "0.875rem", border: "none", background: T.accent, color: "#fff", fontWeight: 900, fontSize: "0.95rem", cursor: "pointer", touchAction: "manipulation" }}>
+              Stwórz pulę i zostań założycielem
+            </button>
+          ) : (
+            <button onClick={() => { setAct(2); resetForm(); }} style={{ width: "100%", padding: "0.875rem", borderRadius: "0.875rem", border: "none", background: T.accent, color: "#fff", fontWeight: 900, fontSize: "0.95rem", cursor: "pointer", touchAction: "manipulation" }}>
+              Zgłoś ładunek najpierw →
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0.75rem", background: "#f0faeb", borderRadius: "0.75rem", border: `1px solid ${T.accent}44`, marginBottom: "0.875rem" }}>
+            <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: T.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <span style={{ fontSize: "0.7rem", fontWeight: 900, color: "#fff" }}>{userFarmer?.name?.charAt(0) ?? "T"}</span>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "0.75rem", fontWeight: 700, color: T.text }}>{userFarmer?.name ?? "Ty"}</div>
+              <div style={{ fontSize: "0.68rem", color: T.accent, fontWeight: 600 }}>★ Założyciel puli</div>
+            </div>
+          </div>
+          <CapacityBar current={userTotalPallets} max={TRUCK_CAPACITY} />
+          <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0.75rem 0 0.5rem" }}>
+            W puli (1 rolnik · czeka na zgłoszenia)
+          </div>
+          {userFarmer && (cropEntries.length > 0
+            ? cropEntries.map(e => <FarmerRow key={e.crop} name={userFarmer.name} crop={e.crop} pallets={e.pallets} isUser />)
+            : <FarmerRow name={userFarmer.name} crop={userFarmer.crop} pallets={userFarmer.pallets} isUser />
+          )}
+          <div style={{ padding: "0.75rem", background: T.surface, border: `1px solid ${T.border}`, borderRadius: "0.875rem", fontSize: "0.8rem", color: T.muted, marginTop: "0.75rem" }}>
+            🔗 Link do puli zostanie wygenerowany — możesz go wysłać sąsiadom.
+          </div>
+          {userFarmer && (
+            <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: `1px solid ${T.border}` }}>
+              <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Twój rachunek · cena rynkowa PL</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
+                <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena rynkowa PL" accent />
+                <StatBox label="Koszt frachtu" value={`${userTransportCostPln} zł`} sub={`${costPerPalletPln} zł/pal szacunek`} />
+                <StatBox label="CO₂ mniej" value={`${userCo2SavedKg} kg`} sub="Twój udział" />
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </>
+  );
+
   const panelContent = (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflowY: "auto" }}>
       {/* Pool header */}
@@ -613,10 +669,10 @@ export default function App() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.625rem" }}>
           <div>
             <div style={{ fontWeight: 900, fontSize: "1rem", color: T.text }}>
-              {selectedPool === 2 ? "Ciężarówka · Backhaul" : `Pula · ${userFarmer?.village ?? creator?.village ?? "Kartuzy"}`}
+              {selectedPool === 2 ? "Ciężarówka · Backhaul" : selectedPool === 3 ? "Własna pula" : `Pula · ${userFarmer?.village ?? creator?.village ?? "Kartuzy"}`}
             </div>
             <div style={{ fontSize: "0.72rem", color: T.subtle }}>
-              Zamknięcie: {selectedPool === 0 ? nextThursday() : selectedPool === 1 ? nextMonday() : nextWednesday()}, 23:59
+              {selectedPool === 3 ? "Twoja pula · data do ustalenia" : `Zamknięcie: ${selectedPool === 0 ? nextThursday() : selectedPool === 1 ? nextMonday() : nextWednesday()}, 23:59`}
             </div>
             <div style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", marginTop: "0.3rem", padding: "0.2rem 0.6rem", borderRadius: "999px", fontSize: "0.65rem", fontWeight: 700, background: "#f0faeb", border: "1px solid #b0d88a", color: T.accent }}>
               <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: T.accent, display: "inline-block" }} />
@@ -633,7 +689,7 @@ export default function App() {
             const pct = Math.min(100, Math.round((tab.pallets / tab.max) * 100));
             return (
               <button key={i} type="button"
-                onClick={() => i === 3 ? (setAct(2), resetForm()) : setSelectedPool(i as 0|1|2)}
+                onClick={() => setSelectedPool(i as 0|1|2|3)}
                 style={{ flexShrink: 0, minWidth: "80px", padding: "0.5rem 0.625rem", borderRadius: "0.75rem", border: `2px solid ${active ? tab.color : T.border}`, background: active ? (i === 2 ? "#fdf8f0" : "#f0faeb") : T.surface, cursor: "pointer", touchAction: "manipulation", textAlign: "left" }}>
                 <div style={{ fontSize: "0.75rem" }}>{tab.icon} <span style={{ fontWeight: 800, color: active ? tab.color : T.text }}>{tab.label}</span></div>
                 <div style={{ fontSize: "0.6rem", color: T.subtle, marginTop: "0.1rem" }}>{tab.sub}</div>
@@ -653,6 +709,7 @@ export default function App() {
         {selectedPool === 0 && PoolDetail0}
         {selectedPool === 1 && PoolDetail1}
         {selectedPool === 2 && PoolDetail2}
+        {selectedPool === 3 && PoolDetail3}
       </div>
 
       {/* Actions */}
