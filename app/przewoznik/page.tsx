@@ -117,6 +117,8 @@ export default function PrzewoznikPage() {
 
   const [result, setResult] = useState<EmptyRunResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [booked, setBooked] = useState(false);
+  const [bookingCode] = useState(() => `AP-2026-${Math.random().toString(36).slice(2,5).toUpperCase()}`);
 
   useEffect(() => {
     setHydrated(true);
@@ -444,8 +446,39 @@ export default function PrzewoznikPage() {
           </>
         )}
 
-        <div style={{ padding: "1rem 0 1.5rem", display: "flex", gap: "0.625rem" }}>
-          <button onClick={() => setAct("form")} style={{ flex: 1, padding: "0.75rem", borderRadius: "0.875rem", border: `1.5px solid ${T.border}`, background: T.surface, color: T.muted, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>
+        {/* Booking */}
+        {r.matches.length > 0 && (
+          booked ? (
+            <div style={{ margin: "0.5rem 0 1rem", background: "#f0faeb", border: "1.5px solid #2d5a1b", borderRadius: "1rem", padding: "1rem 1.25rem" }}>
+              <div style={{ fontWeight: 900, fontSize: "1rem", color: T.accent, marginBottom: "0.375rem" }}>✅ Kurs zarezerwowany!</div>
+              <div style={{ fontSize: "0.8rem", color: T.muted, marginBottom: "0.625rem" }}>
+                Kod rezerwacji: <strong style={{ color: T.text, fontFamily: "monospace" }}>{bookingCode}</strong>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const content = `CYFROWY LIST PRZEWOZOWY (CMR)\nKod: ${bookingCode}\nData: ${r.date}\nTrasa: ${fromField.selected!.label} → ${r.toLabel}\nPalety: ${r.takenPallets}\nPrzewożnik: ${carrierName || "Trans-AgroPool"}\n\nWygenerowano przez AgroPool`;
+                  const blob = new Blob([content], { type: "text/plain" });
+                  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `CMR-${bookingCode}.txt`; a.click();
+                }}
+                style={{ width: "100%", padding: "0.75rem", borderRadius: "0.875rem", border: `1.5px solid ${T.accent}`, background: T.card, color: T.accent, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}
+              >
+                📄 Pobierz cyfrowy list przewozowy (CMR) Offline
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setBooked(true)}
+              style={{ width: "100%", margin: "0.5rem 0 1rem", padding: "1rem", borderRadius: "1rem", border: "none", background: T.accent, color: "#fff", fontWeight: 900, fontSize: "1rem", cursor: "pointer", boxShadow: `0 6px 20px ${T.accent}44` }}
+            >
+              ⚡ Zarezerwuj kurs i pobierz CMR
+            </button>
+          )
+        )}
+
+        <div style={{ padding: "0 0 1.5rem", display: "flex", gap: "0.625rem" }}>
+          <button onClick={() => { setAct("form"); setBooked(false); }} style={{ flex: 1, padding: "0.75rem", borderRadius: "0.875rem", border: `1.5px solid ${T.border}`, background: T.surface, color: T.muted, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>
             + Nowy kurs
           </button>
           <a href="/" style={{ flex: 1, padding: "0.75rem", borderRadius: "0.875rem", border: "none", background: T.accent, color: "#fff", fontWeight: 900, fontSize: "0.85rem", cursor: "pointer", textAlign: "center", textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>

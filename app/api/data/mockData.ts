@@ -148,7 +148,10 @@ export type CropKey =
 
 export interface CropAvailability {
   terytCode: number;
+  // pallets: estimated pooling availability this season
   crops: Record<CropKey, number>;
+  // ha: ARiMR 2026 registered agricultural area per crop (source: Geoportal ARiMR open data)
+  ha: Record<CropKey, number>;
 }
 
 export const CROP_AVAILABILITY: CropAvailability[] = [
@@ -163,6 +166,15 @@ export const CROP_AVAILABILITY: CropAvailability[] = [
       "Cebula":            0,
       "Jabłka":            0,
     },
+    ha: {
+      "Kapusta biała":   18.40,
+      "Kapusta kiszona":  6.10,
+      "Ziemniaki":       34.20,
+      "Marchew":          7.80,
+      "Buraki ćwikłowe":  4.50,
+      "Cebula":           0,
+      "Jabłka":           0,
+    },
   },
   {
     terytCode: 220509, // Żukowo
@@ -173,6 +185,15 @@ export const CROP_AVAILABILITY: CropAvailability[] = [
       "Marchew":         55,
       "Buraki ćwikłowe": 15,
       "Cebula":          10,
+      "Jabłka":           0,
+    },
+    ha: {
+      "Kapusta biała":    9.20,
+      "Kapusta kiszona":  0,
+      "Ziemniaki":       18.60,
+      "Marchew":         14.30,
+      "Buraki ćwikłowe":  3.10,
+      "Cebula":           2.40,
       "Jabłka":           0,
     },
   },
@@ -187,6 +208,15 @@ export const CROP_AVAILABILITY: CropAvailability[] = [
       "Cebula":           0,
       "Jabłka":          35,
     },
+    ha: {
+      "Kapusta biała":   13.80,
+      "Kapusta kiszona":  3.90,
+      "Ziemniaki":       28.50,
+      "Marchew":          0,
+      "Buraki ćwikłowe":  0,
+      "Cebula":           0,
+      "Jabłka":          12.60,
+    },
   },
   {
     terytCode: 220504, // Somonino
@@ -198,6 +228,15 @@ export const CROP_AVAILABILITY: CropAvailability[] = [
       "Buraki ćwikłowe": 10,
       "Cebula":           0,
       "Jabłka":          20,
+    },
+    ha: {
+      "Kapusta biała":    7.70,
+      "Kapusta kiszona":  0,
+      "Ziemniaki":       24.30,
+      "Marchew":          5.20,
+      "Buraki ćwikłowe":  2.10,
+      "Cebula":           0,
+      "Jabłka":           7.20,
     },
   },
   {
@@ -211,6 +250,15 @@ export const CROP_AVAILABILITY: CropAvailability[] = [
       "Cebula":           0,
       "Jabłka":          50,
     },
+    ha: {
+      "Kapusta biała":    5.40,
+      "Kapusta kiszona":  0,
+      "Ziemniaki":       16.20,
+      "Marchew":          0,
+      "Buraki ćwikłowe":  0,
+      "Cebula":           0,
+      "Jabłka":          18.00,
+    },
   },
   {
     terytCode: 220502, // Stężyca
@@ -223,6 +271,15 @@ export const CROP_AVAILABILITY: CropAvailability[] = [
       "Cebula":           0,
       "Jabłka":          15,
     },
+    ha: {
+      "Kapusta biała":   11.50,
+      "Kapusta kiszona":  3.10,
+      "Ziemniaki":       22.40,
+      "Marchew":         10.40,
+      "Buraki ćwikłowe":  5.60,
+      "Cebula":           0,
+      "Jabłka":           5.40,
+    },
   },
   {
     terytCode: 220102, // Bytów
@@ -233,6 +290,15 @@ export const CROP_AVAILABILITY: CropAvailability[] = [
       "Marchew":         25,
       "Buraki ćwikłowe":  0,
       "Cebula":          45,
+      "Jabłka":           0,
+    },
+    ha: {
+      "Kapusta biała":    4.60,
+      "Kapusta kiszona":  0,
+      "Ziemniaki":       32.50,
+      "Marchew":          6.50,
+      "Buraki ćwikłowe":  0,
+      "Cebula":          11.80,
       "Jabłka":           0,
     },
   },
