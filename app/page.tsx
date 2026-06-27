@@ -17,10 +17,10 @@ export default function HomePage() {
   return (
     <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", padding: "1.5rem", color: T.text }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "1.5rem", marginBottom: "2rem" }}>
-        <img src="/agropool-logo.svg" alt="AgroPool" width={72} height={72} style={{ marginBottom: "0.75rem" }} />
-        <div style={{ background: T.accent, borderRadius: "0.75rem", padding: "0.4rem 1.1rem" }}>
-          <span style={{ fontFamily: "var(--font-league-spartan), sans-serif", fontWeight: 700, fontSize: "1.9rem", color: "#fff", letterSpacing: "0.02em", textTransform: "uppercase", lineHeight: 1 }}>AgroPool</span>
-        </div>
+        <img src="/agropool-logo.svg" alt="AgroPool" width={80} height={80} style={{ marginBottom: "0.6rem" }} />
+        <span style={{ fontFamily: "var(--font-league-spartan), sans-serif", fontWeight: 700, fontSize: "2.1rem", letterSpacing: "0.01em", textTransform: "uppercase", lineHeight: 1 }}>
+          <span style={{ color: "#396a1b" }}>Agro</span><span style={{ color: "#f29509" }}>Pool</span>
+        </span>
       </div>
       <div style={{ maxWidth: "440px", width: "100%", textAlign: "center", flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
         <h1 style={{ fontSize: "clamp(1.7rem, 6vw, 2.3rem)", fontWeight: 900, color: T.text, lineHeight: 1.2, letterSpacing: "-0.02em", margin: "0 0 0.75rem" }}>
