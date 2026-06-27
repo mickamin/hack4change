@@ -16,9 +16,9 @@ const T = {
 export default function HomePage() {
   return (
     <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", padding: "1.5rem", color: T.text }}>
-      <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", background: T.card, border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.3rem 0.9rem", marginTop: "1rem", marginBottom: "2rem" }}>
-        <span>🌾</span>
-        <span style={{ fontWeight: 800, fontSize: "0.85rem", color: T.accentHi }}>AgroPool</span>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "1.5rem", marginBottom: "2rem" }}>
+        <div style={{ fontSize: "2.5rem", marginBottom: "0.3rem" }}>🌾</div>
+        <span style={{ fontWeight: 900, fontSize: "1.6rem", color: T.accent, letterSpacing: "-0.03em" }}>AgroPool</span>
       </div>
       <div style={{ maxWidth: "440px", width: "100%", textAlign: "center", flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
         <h1 style={{ fontSize: "clamp(1.7rem, 6vw, 2.3rem)", fontWeight: 900, color: T.text, lineHeight: 1.2, letterSpacing: "-0.02em", margin: "0 0 0.75rem" }}>
@@ -63,9 +63,6 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <p style={{ color: T.subtle, fontSize: "0.7rem", marginTop: "1.75rem" }}>
-          Offline-first · Mniej food waste · Mniej pustych kilometrów
-        </p>
       </div>
     </div>
   );
