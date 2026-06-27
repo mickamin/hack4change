@@ -216,10 +216,17 @@ export default function App() {
             AgroPool łączy rolników z tej samej gminy i wysyła jedną ciężarówkę.
           </p>
 
-          <button onClick={() => setAct(2)} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.1rem 2.5rem", fontSize: "1.15rem", fontWeight: 900, cursor: "pointer", width: "100%", boxShadow: `0 6px 20px ${T.accent}55`, touchAction: "manipulation" }}>
-            Jestem rolnikiem
-          </button>
-          <p style={{ color: T.subtle, fontSize: "0.7rem", marginTop: "1rem" }}>Offline-first · Działa bez zasięgu · Powiat Kartuski</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.75rem" }}>
+            <button onClick={() => setAct(2)} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.25rem 1rem", fontSize: "1rem", fontWeight: 900, cursor: "pointer", boxShadow: `0 6px 20px ${T.accent}55`, touchAction: "manipulation", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.4rem" }}>
+              <span style={{ fontSize: "1.75rem" }}>🌾</span>
+              Jestem rolnikiem
+            </button>
+            <a href="/przewoznik" style={{ background: T.card, color: T.text, border: `2px solid ${T.border}`, borderRadius: "1.25rem", padding: "1.25rem 1rem", fontSize: "1rem", fontWeight: 900, cursor: "pointer", textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.4rem", touchAction: "manipulation" }}>
+              <span style={{ fontSize: "1.75rem" }}>🚚</span>
+              Jestem przewoźnikiem
+            </a>
+          </div>
+          <p style={{ color: T.subtle, fontSize: "0.7rem", marginTop: "0.75rem" }}>Offline-first · Działa bez zasięgu · Powiat Kartuski</p>
         </div>
         <div style={{ height: "10dvh" }} />
       </div>
