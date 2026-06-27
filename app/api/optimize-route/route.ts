@@ -36,21 +36,17 @@ export interface OptimizeRouteResponse {
 }
 
 
-// OSRM — car/van routing (no vehicle restrictions needed for vans)
 async function osrmDistanceKm(waypoints: Array<{ lat: number; lng: number }>): Promise<number> {
   const coords = waypoints.map(p => `${p.lng},${p.lat}`).join(";");
   try {
-    const res = await fetch(
-      `https://router.project-osrm.org/route/v1/driving/${coords}?overview=false`,
-      { next: { revalidate: 3600 } }
-    );
+    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=false`);
+    if (!res.ok) return 0;
     const data = await res.json();
     return (data.routes?.[0]?.distance ?? 0) / 1000;
   } catch { return 0; }
 }
 
-// OpenRouteService — HGV profile (respects weight/height/width restrictions)
-// Falls back to OSRM if ORS_API_KEY not set
+// OpenRouteService — HGV profile, falls back to OSRM without key
 async function hgvDistanceKm(waypoints: Array<{ lat: number; lng: number }>): Promise<number> {
   const apiKey = process.env.ORS_API_KEY;
   if (!apiKey) return osrmDistanceKm(waypoints);
@@ -60,15 +56,21 @@ async function hgvDistanceKm(waypoints: Array<{ lat: number; lng: number }>): Pr
       headers: { "Authorization": apiKey, "Content-Type": "application/json" },
       body: JSON.stringify({
         coordinates: waypoints.map(p => [p.lng, p.lat]),
-        // 24-pallet refrigerated truck: ~40t GVW, 4m height, 2.5m width
-        vehicle_type: "hgv",
-        options: { profile_params: { restrictions: { weight: 40, height: 4.0, width: 2.5 } } },
+        profile_params: {
+          restrictions: { weight: 40, height: 4.0, width: 2.5, length: 18.75 },
+        },
       }),
-      next: { revalidate: 3600 },
     });
+    if (!res.ok) {
+      console.error("[ORS]", res.status, await res.text());
+      return osrmDistanceKm(waypoints);
+    }
     const data = await res.json();
     return (data.routes?.[0]?.summary?.distance ?? 0) / 1000;
-  } catch { return osrmDistanceKm(waypoints); }
+  } catch (e) {
+    console.error("[ORS] fetch failed", e);
+    return osrmDistanceKm(waypoints);
+  }
 }
 
 export async function GET() {
