@@ -24,6 +24,8 @@ export default function Map({ points, isOnline, focusPoint, route, fitPadding }:
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapInstanceRef = useRef<any>(null);
   const routeDrawnRef = useRef(false);
+  const routeRef = useRef(route);
+  useEffect(() => { routeRef.current = route; }, [route]);
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
@@ -47,7 +49,15 @@ export default function Map({ points, isOnline, focusPoint, route, fitPadding }:
 
       mapInstanceRef.current = { map, L };
       setTimeout(() => map.invalidateSize(), 200);
-      setTimeout(() => map.invalidateSize(), 600);
+      setTimeout(() => {
+        map.invalidateSize();
+        // Draw route if it was already set before leaflet finished loading
+        const r = routeRef.current;
+        if (r && r.length >= 2 && !routeDrawnRef.current) {
+          routeDrawnRef.current = true;
+          fetchAndDrawRoute(L, map, r);
+        }
+      }, 600);
     });
 
     return () => {
