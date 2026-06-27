@@ -146,14 +146,6 @@ export default function PrzewoznikPage() {
     );
   }
 
-  function selectAll() {
-    setSelectedCrops([...allCrops]);
-  }
-
-  function deselectAll() {
-    setSelectedCrops([]);
-  }
-
   async function handleSubmit() {
     if (!fromField.selected || !toField.selected) return;
     setLoading(true);
@@ -273,7 +265,7 @@ export default function PrzewoznikPage() {
             </div>
           </section>
 
-          {/* Crop picker — same pattern as rolnik */}
+          {/* Crop picker — identical to rolnik "Co zbierasz?" */}
           <section>
             <Label>Co moge zabrac</Label>
             <input
@@ -284,59 +276,45 @@ export default function PrzewoznikPage() {
               disabled={cropsLoading}
               style={{ ...inputBase, marginBottom: "0.625rem" }}
             />
-
             {cropsLoading ? (
               <div style={{ textAlign: "center", padding: "1rem", color: T.subtle, fontSize: "0.85rem" }}>
                 Ladowanie...
               </div>
-            ) : (
-              <>
-                {/* Select all / deselect all */}
-                <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.625rem" }}>
-                  <button type="button" onClick={selectAll} style={{ padding: "0.4rem 0.75rem", borderRadius: "0.5rem", border: `1.5px solid ${T.border}`, background: T.surface, color: T.muted, fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", touchAction: "manipulation" }}>
-                    Zaznacz wszystkie
-                  </button>
-                  <button type="button" onClick={deselectAll} style={{ padding: "0.4rem 0.75rem", borderRadius: "0.5rem", border: `1.5px solid ${T.border}`, background: T.surface, color: T.muted, fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", touchAction: "manipulation" }}>
-                    Odznacz wszystkie
-                  </button>
-                </div>
-
-                {/* Crop list */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", maxHeight: "240px", overflowY: "auto" }}>
-                  {(cropSearch.trim() ? filteredCrops : allCrops).slice(0, 20).map((crop) => {
-                    const active = selectedCrops.includes(crop);
-                    return (
-                      <button
-                        key={crop}
-                        type="button"
-                        onClick={() => toggleCrop(crop)}
-                        style={{
-                          display: "flex", alignItems: "center", justifyContent: "space-between",
-                          padding: "0.625rem 0.875rem", borderRadius: "0.75rem",
-                          border: `1.5px solid ${active ? T.accent : T.border}`,
-                          background: active ? "#f0faeb" : T.surface,
-                          cursor: "pointer", touchAction: "manipulation",
-                        }}
-                      >
-                        <span style={{ fontSize: "0.9rem", fontWeight: 600, color: active ? T.accent : T.text }}>{capitalize(crop)}</span>
-                        <span style={{ fontSize: "1rem", color: active ? T.accent : T.subtle }}>{active ? "v" : "+"}</span>
-                      </button>
-                    );
-                  })}
-                  {cropSearch.trim() && filteredCrops.length === 0 && (
-                    <p style={{ color: T.subtle, fontSize: "0.85rem", margin: 0 }}>Brak wynikow.</p>
-                  )}
-                </div>
-
-                {/* Selected count */}
-                {selectedCrops.length > 0 && (
-                  <div style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: T.muted, fontWeight: 600 }}>
-                    Wybrano: {selectedCrops.length} z {allCrops.length} upraw
-                  </div>
-                )}
-              </>
-            )}
+            ) : cropSearch.trim() && filteredCrops.length === 0 ? (
+              <p style={{ color: T.subtle, fontSize: "0.85rem", margin: 0 }}>Brak wynikow.</p>
+            ) : cropSearch.trim() ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", maxHeight: "200px", overflowY: "auto" }}>
+                {filteredCrops.slice(0, 12).map((crop) => {
+                  const added = selectedCrops.includes(crop);
+                  return (
+                    <button key={crop} type="button" onClick={() => toggleCrop(crop)}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.625rem 0.875rem", borderRadius: "0.75rem", border: `1.5px solid ${added ? T.accent : T.border}`, background: added ? "#f0faeb" : T.surface, cursor: "pointer", touchAction: "manipulation" }}>
+                      <span style={{ fontSize: "0.9rem", fontWeight: 600, color: added ? T.accent : T.text }}>{capitalize(crop)}</span>
+                      <span style={{ fontSize: "1rem", color: added ? T.accent : T.subtle }}>{added ? "v" : "+"}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
           </section>
+
+          {/* Selected crops list */}
+          {selectedCrops.length > 0 && (
+            <section>
+              <Label>Moje ladunki</Label>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {selectedCrops.map((crop) => (
+                  <div key={crop} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 0.875rem", background: T.card, border: `1.5px solid ${T.accent}55`, borderRadius: "0.875rem" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.9rem", color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{capitalize(crop)}</div>
+                    </div>
+                    <button type="button" onClick={() => toggleCrop(crop)}
+                      style={{ width: "28px", height: "28px", borderRadius: "50%", border: `1.5px solid ${T.border}`, background: T.surface, color: T.muted, fontSize: "0.9rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, touchAction: "manipulation" }}>x</button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           <section>
             <Label>Imie / firma (opcjonalnie)</Label>
