@@ -17,8 +17,8 @@ export default function HomePage() {
   return (
     <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", padding: "1.5rem", color: T.text }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "1.5rem", marginBottom: "2rem" }}>
-        <div style={{ fontSize: "2.5rem", marginBottom: "0.3rem" }}>🌾</div>
-        <span style={{ fontWeight: 900, fontSize: "1.6rem", color: T.accent, letterSpacing: "-0.03em" }}>AgroPool</span>
+        <img src="/agropool-logo.svg" alt="AgroPool" width={72} height={72} style={{ marginBottom: "0.5rem" }} />
+        <span style={{ fontFamily: "var(--font-league-spartan), sans-serif", fontWeight: 700, fontSize: "2rem", color: T.accent, letterSpacing: "0.01em", textTransform: "uppercase" }}>AgroPool</span>
       </div>
       <div style={{ maxWidth: "440px", width: "100%", textAlign: "center", flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
         <h1 style={{ fontSize: "clamp(1.7rem, 6vw, 2.3rem)", fontWeight: 900, color: T.text, lineHeight: 1.2, letterSpacing: "-0.02em", margin: "0 0 0.75rem" }}>

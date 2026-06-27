@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Geist, League_Spartan } from "next/font/google";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
+const leagueSpartan = League_Spartan({ subsets: ["latin"], variable: "--font-league-spartan" });
 
 export const metadata: Metadata = {
   title: "AgroPool — Wspólna logistyka dla rolników",
@@ -29,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pl" className={`${geist.variable} h-full`}>
+    <html lang="pl" className={`${geist.variable} ${leagueSpartan.variable} h-full`}>
       <body className="h-full bg-gray-950 antialiased">{children}</body>
     </html>
   );
