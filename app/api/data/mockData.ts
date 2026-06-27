@@ -91,12 +91,12 @@ export const WHOLESALE_PRICES: WholesalePrice[] = [
   },
 ];
 
-// Renk — Pomorskie Centrum Hurtowe Gdańsk (real wholesale hub for the region)
+// Renk — Pomorskie Centrum Hurtowe, ul. Wodnika 50, Gdańsk
 export const VIRTUAL_HUB = {
   name: "Renk Gdańsk",
-  lat: 54.3441,
-  lng: 18.6475,
-  description: "Pomorskie Centrum Hurtowe — główny rynek hurtowy Trójmiasta",
+  lat: 54.413333,
+  lng: 18.479376,
+  description: "Pomorskie Centrum Hurtowe, ul. Wodnika 50 — główny rynek hurtowy Trójmiasta",
 };
 
 // Route simulation constants
