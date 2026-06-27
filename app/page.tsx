@@ -282,17 +282,18 @@ export default function App() {
           {/* Commune picker */}
           <section>
             <Label>Twoja gmina</Label>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem" }}>
-              {TERYT_COMMUNES.filter(c => c.powiat !== "Gdańsk").map(c => {
-                const active = selectedCommune.code === c.code;
-                return (
-                  <button key={c.code} type="button" onClick={() => setSelectedCommune(c)}
-                    style={{ padding: "0.75rem 0.4rem", borderRadius: "0.875rem", border: `2px solid ${active ? T.accent : T.border}`, background: active ? "#f0faeb" : T.surface, cursor: "pointer", touchAction: "manipulation", transition: "border-color 0.12s, background 0.12s" }}>
-                    <span style={{ fontSize: "0.82rem", fontWeight: active ? 800 : 600, color: active ? T.accent : T.text }}>{c.name}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <select
+              value={selectedCommune.code}
+              onChange={e => {
+                const c = TERYT_COMMUNES.find(c => c.code === Number(e.target.value));
+                if (c) setSelectedCommune(c);
+              }}
+              style={{ background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.875rem", color: T.text, width: "100%", padding: "0.875rem 1rem", fontSize: "1rem", outline: "none", boxSizing: "border-box", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a6a48' strokeWidth='1.5' fill='none' strokeLinecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 1rem center", paddingRight: "2.5rem" }}
+            >
+              {TERYT_COMMUNES.filter(c => c.powiat !== "Gdańsk").map(c => (
+                <option key={c.code} value={c.code}>{c.name} ({c.powiat})</option>
+              ))}
+            </select>
           </section>
 
           {/* Location picker map */}
