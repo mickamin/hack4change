@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
-import { TERYT_COMMUNES, type TerytCommune } from "@/app/api/data/mockData";
 import { haversineKm, type EmptyRunResult, type GeoPoint } from "@/utils/emptyRuns";
 
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
 
-// Paleta spójna z app/page.tsx (AgroPool)
 const T = {
   bg: "#faf7f0",
   card: "#fffdf7",
@@ -22,23 +20,28 @@ const T = {
   subtle: "#9a8a60",
 };
 
-const TRUCK_CAPACITY = 24; // palet
+const TRUCK_CAPACITY = 24;
 
-interface Destination extends GeoPoint {
-  name: string;
+const CARGO_TYPES = [
+  "Kapusta biała",
+  "Kapusta kiszona",
+  "Ziemniaki",
+  "Marchew",
+  "Buraki ćwikłowe",
+] as const;
+
+type Act = "form" | "result";
+
+interface NominatimResult {
+  display_name: string;
+  lat: string;
+  lon: string;
 }
 
-const DESTINATIONS: Destination[] = [
-  { name: "Gdańsk", lat: 54.352, lng: 18.646 },
-  { name: "Gdynia", lat: 54.519, lng: 18.532 },
-  { name: "Bytów", lat: 54.171, lng: 17.491 },
-  { name: "Starogard Gd.", lat: 53.966, lng: 18.529 },
-];
-
-type Act = 1 | 2 | 3;
-
-function communeCentroid(c: TerytCommune): GeoPoint {
-  return { lat: (c.latMin + c.latMax) / 2, lng: (c.lngMin + c.lngMax) / 2 };
+interface PlaceSelection {
+  label: string;
+  lat: number;
+  lng: number;
 }
 
 function isoPlusDays(days: number): string {
@@ -56,20 +59,64 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-const COMMUNES = TERYT_COMMUNES.filter((c) => c.powiat !== "Gdańsk");
+function useNominatim() {
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selected, setSelected] = useState<PlaceSelection | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const search = useCallback((q: string) => {
+    setQuery(q);
+    setSelected(null);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (q.trim().length < 2) {
+      setSuggestions([]);
+      setShowDropdown(false);
+      return;
+    }
+    timerRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&countrycodes=pl&limit=5&q=${encodeURIComponent(q)}`,
+        );
+        const data = (await res.json()) as NominatimResult[];
+        setSuggestions(data);
+        setShowDropdown(data.length > 0);
+      } catch {
+        setSuggestions([]);
+        setShowDropdown(false);
+      }
+    }, 350);
+  }, []);
+
+  const pick = useCallback((item: NominatimResult) => {
+    const short = item.display_name.split(",").slice(0, 2).join(",").trim();
+    setQuery(short);
+    setSelected({ label: short, lat: parseFloat(item.lat), lng: parseFloat(item.lon) });
+    setShowDropdown(false);
+    setSuggestions([]);
+  }, []);
+
+  const blur = useCallback(() => {
+    setTimeout(() => setShowDropdown(false), 200);
+  }, []);
+
+  return { query, suggestions, showDropdown, selected, search, pick, blur };
+}
 
 export default function PrzewoznikPage() {
   const { isOnline } = useOfflineSync();
   const [hydrated, setHydrated] = useState(false);
-  const [act, setAct] = useState<Act>(1);
+  const [act, setAct] = useState<Act>("form");
+
+  const fromField = useNominatim();
+  const toField = useNominatim();
 
   const [carrierName, setCarrierName] = useState("");
-  const [fromCommune, setFromCommune] = useState<TerytCommune>(
-    COMMUNES.find((c) => c.name === "Sierakowice") ?? COMMUNES[0],
-  );
-  const [dest, setDest] = useState<Destination>(DESTINATIONS[0]);
   const [date, setDate] = useState("");
   const [capacity, setCapacity] = useState(12);
+  const [selectedCargo, setSelectedCargo] = useState<Set<string>>(new Set(CARGO_TYPES));
 
   const [result, setResult] = useState<EmptyRunResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -79,9 +126,19 @@ export default function PrzewoznikPage() {
     setDate(isoPlusDays(2));
   }, []);
 
+  function toggleCargo(cargo: string) {
+    setSelectedCargo((prev) => {
+      const next = new Set(prev);
+      if (next.has(cargo)) next.delete(cargo);
+      else next.add(cargo);
+      return next;
+    });
+  }
+
   async function handleSubmit() {
+    if (!fromField.selected || !toField.selected) return;
     setLoading(true);
-    const from = communeCentroid(fromCommune);
+    const from = { lat: fromField.selected.lat, lng: fromField.selected.lng };
     try {
       const res = await fetch("/api/empty-runs", {
         method: "POST",
@@ -89,15 +146,24 @@ export default function PrzewoznikPage() {
         body: JSON.stringify({
           carrierName,
           from,
-          to: { lat: dest.lat, lng: dest.lng },
-          toLabel: dest.name,
+          to: { lat: toField.selected.lat, lng: toField.selected.lng },
+          toLabel: toField.selected.label,
           date,
           capacityPallets: capacity,
         }),
       });
-      const json = (await res.json()) as EmptyRunResult;
-      setResult(json);
-      setAct(3);
+      const raw = (await res.json()) as Partial<EmptyRunResult>;
+      setResult({
+        matches: Array.isArray(raw.matches) ? raw.matches : [],
+        takenPallets: raw.takenPallets ?? 0,
+        capacityPallets: raw.capacityPallets ?? capacity,
+        fillPct: raw.fillPct ?? 0,
+        co2SavedKg: raw.co2SavedKg ?? 0,
+        cargoValuePln: raw.cargoValuePln ?? 0,
+        date: raw.date ?? date,
+        toLabel: raw.toLabel ?? toField.selected.label,
+      });
+      setAct("result");
     } catch {
       setResult({
         matches: [],
@@ -107,9 +173,9 @@ export default function PrzewoznikPage() {
         co2SavedKg: 0,
         cargoValuePln: 0,
         date,
-        toLabel: dest.name,
+        toLabel: toField.selected.label,
       });
-      setAct(3);
+      setAct("result");
     } finally {
       setLoading(false);
     }
@@ -118,112 +184,139 @@ export default function PrzewoznikPage() {
   if (!hydrated) {
     return (
       <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontSize: "2.5rem" }}>🚚</span>
+        <span style={{ fontSize: "1.2rem", color: T.muted, fontWeight: 700 }}>Ladowanie...</span>
       </div>
     );
   }
 
-  // ── AKT 1 — hook ────────────────────────────────────────────────────────────
-  if (act === 1) {
-    return (
-      <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
-        <div style={{ maxWidth: "440px", width: "100%", textAlign: "center" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", background: T.card, border: `1px solid ${T.border}`, borderRadius: "999px", padding: "0.3rem 0.9rem", marginBottom: "1.5rem" }}>
-            <span>🚚</span>
-            <span style={{ fontWeight: 800, fontSize: "0.85rem", color: T.accentHi }}>AgroPool</span>
-            <span style={{ fontSize: "0.65rem", color: T.subtle }}>· dla przewoźników</span>
-          </div>
-          <h1 style={{ fontSize: "clamp(1.6rem, 6vw, 2.2rem)", fontWeight: 900, color: T.text, lineHeight: 1.2, letterSpacing: "-0.02em", margin: "0 0 1rem" }}>
-            Wracasz pusty z Trójmiasta?<br />
-            <span style={{ color: "#b84030" }}>Spalasz paliwo za nic.</span>
-          </h1>
-          <p style={{ color: T.muted, fontSize: "1rem", lineHeight: 1.6, margin: "0 0 0.75rem" }}>
-            Co trzeci kurs powrotny jedzie pusty. Po drodze gniją nadwyżki, których nikt nie odbiera.
-          </p>
-          <p style={{ color: T.accentHi, fontSize: "0.95rem", fontWeight: 700, margin: "0 0 2rem" }}>
-            Podaj trasę i wolne palety — pokażemy towar leżący po Twojej drodze.
-          </p>
-          <button onClick={() => setAct(2)} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.1rem 2.5rem", fontSize: "1.15rem", fontWeight: 900, cursor: "pointer", width: "100%", boxShadow: `0 6px 20px ${T.accent}55` }}>
-            Jestem przewoźnikiem
-          </button>
-          <p style={{ color: T.subtle, fontSize: "0.7rem", marginTop: "1rem" }}>Backhaul · Powiat Kartuski · mniej pustych kilometrów</p>
-        </div>
-      </div>
-    );
-  }
+  const inputBase: React.CSSProperties = {
+    background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.875rem",
+    color: T.text, width: "100%", padding: "0.875rem 1rem", fontSize: "1rem", outline: "none", boxSizing: "border-box",
+  };
 
-  // ── AKT 2 — formularz ───────────────────────────────────────────────────────
-  if (act === 2) {
-    const inputBase: React.CSSProperties = {
-      background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: "0.875rem",
-      color: T.text, width: "100%", padding: "0.875rem 1rem", fontSize: "1rem", outline: "none", boxSizing: "border-box",
-    };
+  const canSubmit = fromField.selected && toField.selected && !loading;
+
+  if (act === "form") {
     return (
       <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", color: T.text }}>
         <div style={{ background: T.card, borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: "1rem", padding: "1rem 1.25rem" }}>
-          <button onClick={() => setAct(1)} style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1 }}>←</button>
+          <a href="/" style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1, textDecoration: "none" }}>&#8592;</a>
           <div>
-            <div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>Zgłoś pusty kurs</div>
-            <div style={{ fontSize: "0.7rem", color: T.subtle }}>Trasa, termin i wolna załadowność</div>
+            <div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>Zglos pusty kurs</div>
+            <div style={{ fontSize: "0.7rem", color: T.subtle }}>Trasa, termin i wolna zaladownosc</div>
           </div>
           <div style={{ marginLeft: "auto" }}><OnlineBadge isOnline={isOnline} /></div>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem", maxWidth: "520px", width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          <section>
-            <Label>Skąd jedziesz</Label>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem" }}>
-              {COMMUNES.map((c) => {
-                const active = fromCommune.code === c.code;
-                return (
-                  <button key={c.code} type="button" onClick={() => setFromCommune(c)}
-                    style={{ padding: "0.75rem 0.4rem", borderRadius: "0.875rem", border: `2px solid ${active ? T.accent : T.border}`, background: active ? "#f0faeb" : T.surface, cursor: "pointer" }}>
-                    <span style={{ fontSize: "0.82rem", fontWeight: active ? 800 : 600, color: active ? T.accent : T.text }}>{c.name}</span>
-                  </button>
-                );
-              })}
-            </div>
+          <section style={{ position: "relative" }}>
+            <Label>Skad jedziesz</Label>
+            <input
+              type="text"
+              placeholder="np. Sierakowice, Kartuzy..."
+              value={fromField.query}
+              onChange={(e) => fromField.search(e.target.value)}
+              onBlur={fromField.blur}
+              onFocus={() => { if (fromField.suggestions.length > 0) fromField.search(fromField.query); }}
+              style={{
+                ...inputBase,
+                borderColor: fromField.selected ? T.accent : T.border,
+              }}
+            />
+            {fromField.showDropdown && (
+              <Dropdown items={fromField.suggestions} onPick={fromField.pick} />
+            )}
+          </section>
+
+          <section style={{ position: "relative" }}>
+            <Label>Dokad (cel kursu)</Label>
+            <input
+              type="text"
+              placeholder="np. Gdansk, Warszawa..."
+              value={toField.query}
+              onChange={(e) => toField.search(e.target.value)}
+              onBlur={toField.blur}
+              onFocus={() => { if (toField.suggestions.length > 0) toField.search(toField.query); }}
+              style={{
+                ...inputBase,
+                borderColor: toField.selected ? T.accent : T.border,
+              }}
+            />
+            {toField.showDropdown && (
+              <Dropdown items={toField.suggestions} onPick={toField.pick} />
+            )}
           </section>
 
           <section>
-            <Label>Dokąd (cel kursu)</Label>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.5rem" }}>
-              {DESTINATIONS.map((d) => {
-                const active = dest.name === d.name;
-                return (
-                  <button key={d.name} type="button" onClick={() => setDest(d)}
-                    style={{ padding: "0.75rem 0.4rem", borderRadius: "0.875rem", border: `2px solid ${active ? T.accent : T.border}`, background: active ? "#f0faeb" : T.surface, cursor: "pointer" }}>
-                    <span style={{ fontSize: "0.85rem", fontWeight: active ? 800 : 600, color: active ? T.accent : T.text }}>{d.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          <section>
-            <Label>Kiedy możesz przyjechać</Label>
+            <Label>Kiedy mozesz przyjechac</Label>
             <input type="date" value={date} min={isoPlusDays(0)} onChange={(e) => setDate(e.target.value)} style={inputBase} />
           </section>
 
           <section>
-            <Label>Wolna załadowność</Label>
+            <Label>Wolna zaladownosc</Label>
             <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-              <CounterBtn onClick={() => setCapacity((p) => Math.max(1, p - 1))} disabled={capacity <= 1}>−</CounterBtn>
+              <CounterBtn onClick={() => setCapacity((p) => Math.max(1, p - 1))} disabled={capacity <= 1}>-</CounterBtn>
               <div style={{ flex: 1, textAlign: "center" }}>
                 <div style={{ fontSize: "3.5rem", fontWeight: 900, color: T.accent, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{capacity}</div>
-                <div style={{ fontSize: "0.7rem", color: T.subtle, marginTop: "0.2rem" }}>wolnych palet (max ciężarówka ≈ {TRUCK_CAPACITY})</div>
+                <div style={{ fontSize: "0.7rem", color: T.subtle, marginTop: "0.2rem" }}>wolnych palet (max ciezarowka ~ {TRUCK_CAPACITY})</div>
               </div>
               <CounterBtn onClick={() => setCapacity((p) => Math.min(TRUCK_CAPACITY, p + 1))} disabled={capacity >= TRUCK_CAPACITY}>+</CounterBtn>
             </div>
           </section>
 
           <section>
-            <Label>Imię / firma (opcjonalnie)</Label>
+            <Label>Co moge zabrac</Label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+              {CARGO_TYPES.map((cargo) => {
+                const active = selectedCargo.has(cargo);
+                return (
+                  <button
+                    key={cargo}
+                    type="button"
+                    onClick={() => toggleCargo(cargo)}
+                    style={{
+                      padding: "0.55rem 1rem",
+                      borderRadius: "999px",
+                      border: `2px solid ${active ? T.accent : T.border}`,
+                      background: active ? "#f0faeb" : T.surface,
+                      cursor: "pointer",
+                      fontSize: "0.82rem",
+                      fontWeight: active ? 800 : 600,
+                      color: active ? T.accent : T.text,
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    {cargo}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section>
+            <Label>Imie / firma (opcjonalnie)</Label>
             <input type="text" placeholder="np. Trans-Kaszuby" value={carrierName} onChange={(e) => setCarrierName(e.target.value)} style={inputBase} />
           </section>
 
-          <button type="button" onClick={handleSubmit} disabled={loading} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.2rem", fontSize: "1.1rem", fontWeight: 900, cursor: loading ? "wait" : "pointer", width: "100%", boxShadow: `0 6px 20px ${T.accent}44`, opacity: loading ? 0.7 : 1 }}>
-            {loading ? "Szukam towaru…" : "Szukaj towaru po drodze"}
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            style={{
+              background: canSubmit ? T.accent : T.subtle,
+              color: "#fff",
+              border: "none",
+              borderRadius: "1.25rem",
+              padding: "1.2rem",
+              fontSize: "1.1rem",
+              fontWeight: 900,
+              cursor: canSubmit ? "pointer" : "not-allowed",
+              width: "100%",
+              boxShadow: canSubmit ? `0 6px 20px ${T.accent}44` : "none",
+              opacity: loading ? 0.7 : 1,
+            }}
+          >
+            {loading ? "Szukam towaru..." : "Szukaj towaru po drodze"}
           </button>
           <div style={{ height: "1rem" }} />
         </div>
@@ -231,25 +324,30 @@ export default function PrzewoznikPage() {
     );
   }
 
-  // ── AKT 3 — wynik ───────────────────────────────────────────────────────────
+  // ── WYNIK ───────────────────────────────────────────────────────────────
   const r = result!;
-  const from = communeCentroid(fromCommune);
-  const orderedPickups = [...r.matches].sort(
+  const from = { lat: fromField.selected!.lat, lng: fromField.selected!.lng };
+
+  const filteredMatches = r.matches.filter((m) => selectedCargo.has(m.farmer.crop));
+  const filteredPallets = filteredMatches.reduce((sum, m) => sum + m.farmer.pallets, 0);
+  const filteredFillPct = r.capacityPallets > 0 ? Math.min(100, Math.round((filteredPallets / r.capacityPallets) * 100)) : 0;
+
+  const orderedPickups = [...filteredMatches].sort(
     (a, b) => haversineKm(from, a.farmer) - haversineKm(from, b.farmer),
   );
   const mapPoints = [
-    { lat: from.lat, lng: from.lng, name: `Start: ${fromCommune.name}`, isUser: true, isHub: false },
-    ...orderedPickups.map((m) => ({ lat: m.farmer.lat, lng: m.farmer.lng, name: `${m.farmer.village} · ${m.farmer.pallets} pal.`, isUser: false, isHub: false })),
-    { lat: dest.lat, lng: dest.lng, name: `Cel: ${r.toLabel}`, isHub: true, isUser: false },
+    { lat: from.lat, lng: from.lng, name: `Start: ${fromField.selected!.label}`, isUser: true, isHub: false },
+    ...orderedPickups.map((m) => ({ lat: m.farmer.lat, lng: m.farmer.lng, name: `${m.farmer.village} - ${m.farmer.pallets} pal.`, isUser: false, isHub: false })),
+    { lat: toField.selected!.lat, lng: toField.selected!.lng, name: `Cel: ${r.toLabel}`, isHub: true, isUser: false },
   ];
-  const routePts = [from, ...orderedPickups.map((m) => ({ lat: m.farmer.lat, lng: m.farmer.lng })), { lat: dest.lat, lng: dest.lng }];
+  const routePts = [from, ...orderedPickups.map((m) => ({ lat: m.farmer.lat, lng: m.farmer.lng })), { lat: toField.selected!.lat, lng: toField.selected!.lng }];
 
   return (
     <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", color: T.text }}>
       <div style={{ background: T.card, borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: "1rem", padding: "0.875rem 1.25rem" }}>
-        <button onClick={() => setAct(2)} style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1 }}>←</button>
+        <button onClick={() => setAct("form")} style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1 }}>&#8592;</button>
         <div>
-          <div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>{fromCommune.name} → {r.toLabel}</div>
+          <div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>{fromField.selected!.label} &#8594; {r.toLabel}</div>
           <div style={{ fontSize: "0.7rem", color: T.subtle }}>{capitalize(formatPlDate(r.date))}</div>
         </div>
         <div style={{ marginLeft: "auto" }}><OnlineBadge isOnline={isOnline} /></div>
@@ -260,32 +358,31 @@ export default function PrzewoznikPage() {
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "1rem 1.25rem", maxWidth: "560px", width: "100%", margin: "0 auto" }}>
-        {/* Pasek zapełnienia */}
         <div style={{ marginBottom: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: T.muted, marginBottom: "0.3rem" }}>
-            <span>{r.takenPallets} / {r.capacityPallets} palet zapełnione</span>
-            <span style={{ color: r.fillPct >= 100 ? T.accent : T.subtle }}>{r.fillPct}%</span>
+            <span>{filteredPallets} / {r.capacityPallets} palet zapelnione</span>
+            <span style={{ color: filteredFillPct >= 100 ? T.accent : T.subtle }}>{filteredFillPct}%</span>
           </div>
           <div style={{ height: "8px", background: T.surface, borderRadius: "999px", overflow: "hidden", border: `1px solid ${T.border}` }}>
-            <div style={{ height: "100%", width: `${r.fillPct}%`, background: r.fillPct >= 100 ? T.accent : T.accentHi, borderRadius: "999px", transition: "width 0.6s ease" }} />
+            <div style={{ height: "100%", width: `${filteredFillPct}%`, background: filteredFillPct >= 100 ? T.accent : T.accentHi, borderRadius: "999px", transition: "width 0.6s ease" }} />
           </div>
         </div>
 
-        {r.matches.length === 0 ? (
+        {filteredMatches.length === 0 ? (
           <div style={{ background: "#fdf4e6", border: `1px solid ${T.gold}`, borderRadius: "0.875rem", padding: "1rem", color: T.text, fontSize: "0.9rem" }}>
-            Brak nadwyżek w korytarzu tej trasy na teraz. Spróbuj innego celu albo zwiększ załadowność.
+            Brak nadwyzek w korytarzu tej trasy dla wybranych typow ladunku. Sprobuj innego celu, zwieksz zaladownosc lub zmien filtr ladunku.
           </div>
         ) : (
           <>
             <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
-              Do zabrania po drodze ({r.matches.length})
+              Do zabrania po drodze ({filteredMatches.length})
             </div>
             {orderedPickups.map((m) => (
               <div key={m.farmer.id} style={{ display: "flex", alignItems: "center", padding: "0.6rem 0", borderBottom: `1px solid ${T.border}`, gap: "0.7rem" }}>
-                <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: T.surface, border: `1.5px solid ${T.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "0.8rem" }}>🥬</div>
+                <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: T.surface, border: `1.5px solid ${T.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "0.7rem", fontWeight: 800, color: T.accent }}>P</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: "0.9rem", color: T.text }}>{m.farmer.village}</div>
-                  <div style={{ fontSize: "0.72rem", color: T.subtle }}>{m.farmer.crop} · +{m.detourKm} km od trasy</div>
+                  <div style={{ fontSize: "0.72rem", color: T.subtle }}>{m.farmer.crop} - +{m.detourKm} km od trasy</div>
                 </div>
                 <div style={{ flexShrink: 0, textAlign: "right" }}>
                   <div style={{ fontWeight: 900, fontSize: "0.95rem", color: T.accent, fontVariantNumeric: "tabular-nums" }}>{m.farmer.pallets}</div>
@@ -296,23 +393,23 @@ export default function PrzewoznikPage() {
 
             <div style={{ marginTop: "1rem", background: "#f0faeb", border: "1px solid #b0d88a", borderRadius: "0.875rem", padding: "0.875rem" }}>
               <div style={{ fontSize: "0.8rem", fontWeight: 800, color: T.accent, marginBottom: "0.625rem" }}>
-                Pusty kurs zamieniony w {r.takenPallets} palet ładunku
+                Pusty kurs zamieniony w {filteredPallets} palet ladunku
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
-                <StatBox label="CO₂ zaoszczędzone" value={`${r.co2SavedKg} kg`} />
-                <StatBox label="Wartość ładunku" value={`${r.cargoValuePln.toLocaleString("pl-PL")} zł`} />
+                <StatBox label="CO2 zaoszczedzone" value={`${r.co2SavedKg} kg`} />
+                <StatBox label="Wartosc ladunku" value={`${r.cargoValuePln.toLocaleString("pl-PL")} zl`} />
               </div>
             </div>
           </>
         )}
 
         <div style={{ padding: "1rem 0 1.5rem", display: "flex", gap: "0.625rem" }}>
-          <button onClick={() => setAct(2)} style={{ flex: 1, padding: "0.75rem", borderRadius: "0.875rem", border: `1.5px solid ${T.border}`, background: T.surface, color: T.muted, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>
+          <button onClick={() => setAct("form")} style={{ flex: 1, padding: "0.75rem", borderRadius: "0.875rem", border: `1.5px solid ${T.border}`, background: T.surface, color: T.muted, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>
             + Nowy kurs
           </button>
-          <button onClick={() => setAct(1)} style={{ flex: 1, padding: "0.75rem", borderRadius: "0.875rem", border: "none", background: T.accent, color: "#fff", fontWeight: 900, fontSize: "0.85rem", cursor: "pointer" }}>
+          <a href="/" style={{ flex: 1, padding: "0.75rem", borderRadius: "0.875rem", border: "none", background: T.accent, color: "#fff", fontWeight: 900, fontSize: "0.85rem", cursor: "pointer", textAlign: "center", textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
             Start
-          </button>
+          </a>
         </div>
       </div>
     </div>
@@ -320,6 +417,31 @@ export default function PrzewoznikPage() {
 }
 
 // ── Mikro-komponenty ──────────────────────────────────────────────────────────
+
+function Dropdown({ items, onPick }: { items: NominatimResult[]; onPick: (item: NominatimResult) => void }) {
+  return (
+    <div style={{
+      position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50,
+      background: T.card, border: `1.5px solid ${T.border}`, borderRadius: "0.75rem",
+      marginTop: "0.25rem", boxShadow: "0 4px 16px rgba(0,0,0,0.08)", overflow: "hidden",
+    }}>
+      {items.map((item, i) => (
+        <button
+          key={`${item.lat}-${item.lon}-${i}`}
+          type="button"
+          onMouseDown={(e) => { e.preventDefault(); onPick(item); }}
+          style={{
+            display: "block", width: "100%", textAlign: "left", padding: "0.7rem 1rem",
+            border: "none", borderBottom: i < items.length - 1 ? `1px solid ${T.border}` : "none",
+            background: "transparent", cursor: "pointer", fontSize: "0.85rem", color: T.text,
+          }}
+        >
+          {item.display_name}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function StatBox({ label, value }: { label: string; value: string }) {
   return (
