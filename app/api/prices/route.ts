@@ -5,13 +5,21 @@ import { NextResponse } from "next/server";
 const EC_BASE = "https://api.tech.ec.europa.eu/agrifood/api/fruitAndVegetable/pricesSupplyChain";
 
 // Map our crop names → EC product variety search strings
+// Includes both mock display names and Supabase ARiMR lowercase variants
 const CROP_MAP: Record<string, { ecProduct: string; palletWeightKg: number }> = {
   "Kapusta biała":   { ecProduct: "Cabbage",  palletWeightKg: 600 },
+  "kapusta":         { ecProduct: "Cabbage",  palletWeightKg: 600 },
+  "kapusta biala":   { ecProduct: "Cabbage",  palletWeightKg: 600 },
   "Ziemniaki":       { ecProduct: "Potatoes", palletWeightKg: 700 },
+  "ziemniak":        { ecProduct: "Potatoes", palletWeightKg: 700 },
   "Marchew":         { ecProduct: "Carrots",  palletWeightKg: 650 },
+  "marchew jadalna": { ecProduct: "Carrots",  palletWeightKg: 650 },
   "Cebula":          { ecProduct: "Onions",   palletWeightKg: 600 },
+  "cebula":          { ecProduct: "Onions",   palletWeightKg: 600 },
   "Buraki ćwikłowe": { ecProduct: "Beets",    palletWeightKg: 680 },
+  "burak cwiklowy":  { ecProduct: "Beets",    palletWeightKg: 680 },
   "Jabłka":          { ecProduct: "Apples",   palletWeightKg: 400 },
+  "sad":             { ecProduct: "Apples",   palletWeightKg: 400 },
 };
 
 // Fallback prices EUR/100kg if API unavailable

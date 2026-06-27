@@ -65,7 +65,9 @@ export default function App() {
   const [showPanel, setShowPanel]       = useState(false);
   const [countedFarmers, setCountedFarmers] = useState(0);
   const [animStep, setAnimStep]         = useState(0);
-  const [selectedPool, setSelectedPool] = useState<0|1|2>(0);
+  const [selectedPool, setSelectedPool] = useState<0|1|2|3>(0);
+  // which pool the user joined: 0=own pool, 1=pool2, 2=truck, 3=none yet
+  const [joinedPool, setJoinedPool]     = useState<0|1|2|null>(null);
 
   useEffect(() => {
     setHydrated(true);
@@ -140,6 +142,8 @@ export default function App() {
     }));
     farmers.forEach(f => enqueue(f));
     setUserFarmer(farmers[0]);
+    setJoinedPool(0);
+    setSelectedPool(0);
     setCountedFarmers(0);
     setAnimStep(0);
     setShowPanel(false);
@@ -484,14 +488,19 @@ export default function App() {
       )}
       <CapacityBar current={poolPallets} max={TRUCK_CAPACITY} />
       <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0.75rem 0 0.5rem" }}>
-        W puli ({visibleFarmers.length + (userFarmer ? 1 : 0)} rolników)
+        W puli ({visibleFarmers.length + (joinedPool === 0 && userFarmer ? 1 : 0)} rolników)
       </div>
-      {userFarmer && cropEntries.length > 0
+      {joinedPool === 0 && userFarmer && (cropEntries.length > 0
         ? cropEntries.map(e => <FarmerRow key={e.crop} name={userFarmer.name} crop={e.crop} pallets={e.pallets} isUser />)
-        : userFarmer && <FarmerRow name={userFarmer.name} crop={userFarmer.crop} pallets={userFarmer.pallets} isUser />
-      }
+        : <FarmerRow name={userFarmer.name} crop={userFarmer.crop} pallets={userFarmer.pallets} isUser />
+      )}
       {visibleFarmers.map(f => <FarmerRow key={f.id} name={f.name} crop={f.crop} pallets={f.pallets} isCreator={!!f.isPoolCreator} />)}
-      {animStep >= 2 && metrics && (
+      {joinedPool !== 0 && userFarmer && (
+        <button onClick={() => setJoinedPool(0)} style={{ width: "100%", marginTop: "0.5rem", padding: "0.75rem", borderRadius: "0.875rem", border: `1.5px dashed ${T.accent}`, background: "transparent", color: T.accent, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", touchAction: "manipulation" }}>
+          + Dołącz do tej puli
+        </button>
+      )}
+      {animStep >= 2 && metrics && joinedPool === 0 && (
         <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: `1px solid ${T.border}` }}>
           <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
             Twój rachunek · cena rynkowa PL {metrics.priceSource === "ec-agridata" ? <span style={{ color: T.accent }}>live</span> : "szacunek"}
@@ -520,21 +529,28 @@ export default function App() {
       </div>
       <CapacityBar current={pool2Pallets} max={TRUCK_CAPACITY} />
       <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0.75rem 0 0.5rem" }}>
-        W puli ({pool2Farmers.length + (userFarmer ? 1 : 0)} rolników)
+        W puli ({pool2Farmers.length + (joinedPool === 1 && userFarmer ? 1 : 0)} rolników)
       </div>
-      {userFarmer && cropEntries.length > 0
+      {joinedPool === 1 && userFarmer && (cropEntries.length > 0
         ? cropEntries.map(e => <FarmerRow key={e.crop} name={userFarmer.name} crop={e.crop} pallets={e.pallets} isUser />)
-        : userFarmer && <FarmerRow name={userFarmer.name} crop={userFarmer.crop} pallets={userFarmer.pallets} isUser />
-      }
+        : <FarmerRow name={userFarmer.name} crop={userFarmer.crop} pallets={userFarmer.pallets} isUser />
+      )}
       {pool2Farmers.map(f => <FarmerRow key={f.id} name={f.name} crop={f.crop} pallets={f.pallets} isCreator={f.isCreator} />)}
-      <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: `1px solid ${T.border}` }}>
-        <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Twój rachunek</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
-          <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena rynkowa PL" accent />
-          <StatBox label="Koszt frachtu" value={`~${Math.round(userTransportCostPln * 0.85)} zł`} sub={`~${Math.round(costPerPalletPln * 0.85)} zł/pal · vs ~${userIndividualCostPln} zł sam`} />
-          <StatBox label="CO₂ mniej" value={`~${Math.round(userCo2SavedKg * 0.85)} kg`} sub="Twój udział" />
+      {joinedPool !== 1 && userFarmer && (
+        <button onClick={() => setJoinedPool(1)} style={{ width: "100%", marginTop: "0.5rem", padding: "0.75rem", borderRadius: "0.875rem", border: `1.5px dashed ${T.accent}`, background: "transparent", color: T.accent, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", touchAction: "manipulation" }}>
+          + Dołącz do tej puli
+        </button>
+      )}
+      {joinedPool === 1 && userFarmer && (
+        <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: `1px solid ${T.border}` }}>
+          <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Twój rachunek · cena rynkowa PL</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
+            <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena rynkowa PL" accent />
+            <StatBox label="Koszt frachtu" value={`~${Math.round(userTransportCostPln * 0.85)} zł`} sub={`~${Math.round(costPerPalletPln * 0.85)} zł/pal · vs ~${userIndividualCostPln} zł sam`} />
+            <StatBox label="CO₂ mniej" value={`~${Math.round(userCo2SavedKg * 0.85)} kg`} sub="Twój udział" />
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 
@@ -557,15 +573,26 @@ export default function App() {
       <div style={{ padding: "0.75rem", background: "#f0faeb", border: "1px solid #b0d88a", borderRadius: "0.875rem", fontSize: "0.8rem", color: T.accent, fontWeight: 700, marginBottom: "0.75rem" }}>
         🔄 Pusty przebieg → TIR wraca z Gdańska i zabierze Twój towar po drodze.
       </div>
-      <CapacityBar current={6} max={18} color={T.gold} />
-      <div style={{ marginTop: "0.75rem" }}>
-        <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Twój rachunek</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
-          <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena rynkowa PL" accent />
-          <StatBox label="Koszt frachtu" value={`~${Math.round(userTransportCostPln * 0.9)} zł`} sub={`~${Math.round(costPerPalletPln * 0.9)} zł/pal · kurs powrotny`} />
-          <StatBox label="CO₂ mniej" value={`~${Math.round(userCo2SavedKg * 1.2)} kg`} sub="kurs powrotny" />
+      <CapacityBar current={joinedPool === 2 && userFarmer ? 6 + userTotalPallets : 6} max={18} color={T.gold} />
+      {joinedPool === 2 && userFarmer && (cropEntries.length > 0
+        ? cropEntries.map(e => <FarmerRow key={e.crop} name={userFarmer.name} crop={e.crop} pallets={e.pallets} isUser />)
+        : <FarmerRow name={userFarmer.name} crop={userFarmer.crop} pallets={userFarmer.pallets} isUser />
+      )}
+      {joinedPool !== 2 && userFarmer && (
+        <button onClick={() => setJoinedPool(2)} style={{ width: "100%", marginTop: "0.5rem", padding: "0.75rem", borderRadius: "0.875rem", border: `1.5px dashed ${T.gold}`, background: "transparent", color: T.gold, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", touchAction: "manipulation" }}>
+          + Zarezerwuj miejsce w ciężarówce
+        </button>
+      )}
+      {joinedPool === 2 && userFarmer && (
+        <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: `1px solid ${T.border}` }}>
+          <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Twój rachunek · kurs powrotny</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
+            <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena rynkowa PL" accent />
+            <StatBox label="Koszt frachtu" value={`~${Math.round(userTransportCostPln * 0.9)} zł`} sub={`~${Math.round(costPerPalletPln * 0.9)} zł/pal · kurs powrotny`} />
+            <StatBox label="CO₂ mniej" value={`~${Math.round(userCo2SavedKg * 1.2)} kg`} sub="kurs powrotny" />
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 
