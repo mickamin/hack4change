@@ -135,7 +135,6 @@ export default function DystrybutorPage() {
         <div style={{ background: T.card, borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: "1rem", padding: "1rem 1.25rem" }}>
           <a href="/" style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1, textDecoration: "none" }}>&#8592;</a>
           <div><div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>Czego potrzebujesz</div><div style={{ fontSize: "0.7rem", color: T.subtle }}>Produkt, ilość i miejsce dostawy</div></div>
-          <div style={{ marginLeft: "auto" }}><OnlineBadge isOnline={isOnline} /></div>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem", maxWidth: "520px", width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -253,7 +252,6 @@ export default function DystrybutorPage() {
       <div style={{ background: T.card, borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: "1rem", padding: "0.875rem 1.25rem" }}>
         <button onClick={() => setAct(2)} style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1 }}>&#8592;</button>
         <div><div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>{r.crop}</div><div style={{ fontSize: "0.7rem", color: T.subtle }}>dostawa: {r.nearLabel}</div></div>
-        <div style={{ marginLeft: "auto" }}><OnlineBadge isOnline={isOnline} /></div>
       </div>
 
       <div style={{ height: "44dvh", minHeight: "260px", position: "relative" }}>
@@ -334,13 +332,4 @@ function StatBox({ label, value }: { label: string; value: string }) {
 
 function Label({ children }: { children: React.ReactNode }) {
   return <p style={{ color: T.muted, fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.5rem" }}>{children}</p>;
-}
-
-function OnlineBadge({ isOnline }: { isOnline: boolean }) {
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.3rem 0.7rem", borderRadius: "999px", fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", background: isOnline ? "rgba(240,250,235,0.9)" : "rgba(253,240,235,0.9)", border: `1.5px solid ${isOnline ? T.accent : "#c87050"}`, color: isOnline ? T.accent : "#7a2808" }}>
-      <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: isOnline ? T.accent : "#c87050" }} />
-      {isOnline ? "Online" : "Offline"}
-    </span>
-  );
 }

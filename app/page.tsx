@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-// Ekran startowy — wybór roli (Rolnik / Przewoźnik / Dystrybutor).
 const T = {
   bg: "#faf7f0",
   card: "#fffdf7",

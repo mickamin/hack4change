@@ -229,7 +229,6 @@ export default function PrzewoznikPage() {
             <div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>Zgłoś pusty kurs</div>
             <div style={{ fontSize: "0.7rem", color: T.subtle }}>Trasa, termin i wolna załadowność</div>
           </div>
-          <div style={{ marginLeft: "auto" }}><OnlineBadge isOnline={isOnline} /></div>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem", maxWidth: "520px", width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -419,7 +418,6 @@ export default function PrzewoznikPage() {
           <div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>{fromField.selected!.label} &#8594; {r.toLabel}</div>
           <div style={{ fontSize: "0.7rem", color: T.subtle }}>{capitalize(formatPlDate(r.date))}</div>
         </div>
-        <div style={{ marginLeft: "auto" }}><OnlineBadge isOnline={isOnline} /></div>
       </div>
 
       <div style={{ height: "44dvh", minHeight: "260px", position: "relative" }}>
@@ -593,14 +591,5 @@ function CounterBtn({ onClick, disabled, children }: { onClick: () => void; disa
     <button type="button" onClick={onClick} disabled={disabled} style={{ width: "68px", height: "68px", borderRadius: "1rem", background: T.surface, border: `2px solid ${T.border}`, color: disabled ? T.subtle : T.text, fontSize: "2rem", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: disabled ? "not-allowed" : "pointer", flexShrink: 0, touchAction: "manipulation" }}>
       {children}
     </button>
-  );
-}
-
-function OnlineBadge({ isOnline }: { isOnline: boolean }) {
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.3rem 0.7rem", borderRadius: "999px", fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", background: isOnline ? "rgba(240,250,235,0.9)" : "rgba(253,240,235,0.9)", border: `1.5px solid ${isOnline ? T.accent : "#c87050"}`, color: isOnline ? T.accent : "#7a2808" }}>
-      <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: isOnline ? T.accent : "#c87050" }} />
-      {isOnline ? "Online" : "Offline"}
-    </span>
   );
 }
