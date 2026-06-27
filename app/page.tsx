@@ -62,6 +62,7 @@ export default function App() {
   // Act 3
   const [userFarmer, setUserFarmer]     = useState<Farmer | null>(null);
   const [routeData, setRouteData]       = useState<OptimizeRouteResponse | null>(null);
+  const [userPricesMap, setUserPricesMap] = useState<Record<string, number>>({});
   const [showPanel, setShowPanel]       = useState(false);
   const [countedFarmers, setCountedFarmers] = useState(0);
   const [animStep, setAnimStep]         = useState(0);
@@ -143,6 +144,14 @@ export default function App() {
     farmers.forEach(f => enqueue(f));
     setUserFarmer(farmers[0]);
     setJoinedPool(0);
+    // Fetch live prices for user's actual crops (bypasses routeData pricesMap cache)
+    fetch("/api/prices").then(r => r.json()).then(json => {
+      const map: Record<string, number> = {};
+      for (const [crop, data] of Object.entries(json.prices as Record<string, { plnPerPallet: number }>)) {
+        map[crop] = data.plnPerPallet;
+      }
+      setUserPricesMap(map);
+    }).catch(() => {});
     setSelectedPool(0);
     setCountedFarmers(0);
     setAnimStep(0);
@@ -173,10 +182,11 @@ export default function App() {
     ? cropEntries.reduce((s, e) => s + e.pallets, 0)
     : (userFarmer?.pallets ?? 0);
 
-  // Personal metrics for this farmer
+  // Personal metrics for this farmer — use userPricesMap (fresh fetch) over routeData cache
+  const effectivePricesMap = Object.keys(userPricesMap).length > 0 ? userPricesMap : pricesMap;
   const userEarningsPln = cropEntries.length > 0
-    ? cropEntries.reduce((s, e) => s + e.pallets * (pricesMap[e.crop] ?? 500), 0)
-    : userFarmer ? (userFarmer.pallets * (pricesMap[userFarmer.crop] ?? 500)) : 0;
+    ? cropEntries.reduce((s, e) => s + e.pallets * (effectivePricesMap[e.crop] ?? 500), 0)
+    : userFarmer ? (userFarmer.pallets * (effectivePricesMap[userFarmer.crop] ?? 500)) : 0;
   const userTransportCostPln = metrics && metrics.totalPallets > 0
     ? Math.round(metrics.costConsolidatedPln * (userTotalPallets / metrics.totalPallets))
     : 0;

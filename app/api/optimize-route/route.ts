@@ -79,7 +79,7 @@ export async function GET() {
 
   // Fetch live prices from EC Agri-food API
   const pricesRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"}/api/prices`, {
-    next: { revalidate: 3600 },
+    cache: "no-store",
   }).then(r => r.json() as Promise<PricesResponse>).catch(() => null);
 
   // Real distances via OSRM
