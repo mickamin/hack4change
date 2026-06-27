@@ -268,7 +268,7 @@ export default function App() {
           <button onClick={() => setAct(1)} style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1 }}>←</button>
           <div>
             <div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>
-              {status === "joining" ? "Dołącz do puli" : "Załóż pulę"}
+              {status === "joining" ? "Dołącz do puli" : "Zgłoś ładunek"}
             </div>
             <div style={{ fontSize: "0.7rem", color: T.subtle }}>
               {status === "joining" ? `Rolnicy z ${selectedCommune.name} już czekają` : "Bądź pierwszy w swojej gminie"}
@@ -384,7 +384,7 @@ export default function App() {
 
           {canSubmit && (
             <button type="button" onClick={handleSubmit} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: "1.25rem", padding: "1.2rem", fontSize: "1.1rem", fontWeight: 900, cursor: "pointer", width: "100%", boxShadow: `0 6px 20px ${T.accent}44`, touchAction: "manipulation" }}>
-              {status === "joining" ? "Dołącz do puli" : "Załóż pulę"}
+              {status === "joining" ? "Dołącz do puli" : "Zgłoś ładunek"}
             </button>
           )}
 
