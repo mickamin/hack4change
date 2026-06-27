@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import {
   FARMERS,
   EMISSIONS,
-  WHOLESALE_PRICES,
   VIRTUAL_HUB,
   ROUTE_CONSTANTS,
   type Farmer,
 } from "../data/mockData";
+import type { PricesResponse } from "../prices/route";
 
 export interface OptimizeRouteResponse {
   farmers: Farmer[];
@@ -20,6 +20,8 @@ export interface OptimizeRouteResponse {
     costConsolidatedPln: number;
     costSavedPln: number;
     cargoValuePln: number;
+    milkRunDistanceKm: number;
+    priceSource: "ec-agridata" | "fallback";
   };
   milkRunRoute: Array<{ lat: number; lng: number; name: string }>;
 }
@@ -34,45 +36,61 @@ function calcFuelCostPln(distanceKm: number, litersPer100km: number): number {
   return liters * ROUTE_CONSTANTS.dieselPricePerLiter;
 }
 
+// Fetch real distances from OSRM for a list of waypoints, returns total km
+async function osrmDistanceKm(waypoints: Array<{ lat: number; lng: number }>): Promise<number> {
+  const coords = waypoints.map(p => `${p.lng},${p.lat}`).join(";");
+  try {
+    const res = await fetch(
+      `https://router.project-osrm.org/route/v1/driving/${coords}?overview=false`,
+      { next: { revalidate: 3600 } }
+    );
+    const data = await res.json();
+    const meters: number = data.routes?.[0]?.distance ?? 0;
+    return meters / 1000;
+  } catch {
+    return 0;
+  }
+}
+
 export async function GET() {
   const totalPallets = FARMERS.reduce((sum, f) => sum + f.pallets, 0);
 
-  // Individual scenario: each farmer drives a small van ~100km
-  const co2Individual = FARMERS.reduce(
-    (sum) =>
-      sum +
-      calcCo2Kg(
-        ROUTE_CONSTANTS.distancePerFarmerKm,
-        EMISSIONS.smallVanLitersPer100km
-      ),
-    0
-  );
-  const costIndividual = FARMERS.reduce(
-    (sum) =>
-      sum +
-      calcFuelCostPln(
-        ROUTE_CONSTANTS.distancePerFarmerKm,
-        EMISSIONS.smallVanLitersPer100km
-      ),
-    0
-  );
+  // Fetch live prices from EC Agri-food API
+  const pricesRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"}/api/prices`, {
+    next: { revalidate: 3600 },
+  }).then(r => r.json() as Promise<PricesResponse>).catch(() => null);
 
-  // Consolidated scenario: one truck does a milk run of 120km
-  const co2Consolidated = calcCo2Kg(
-    ROUTE_CONSTANTS.consolidatedRouteKm,
-    EMISSIONS.bigTruckLitersPer100km
-  );
-  const costConsolidated = calcFuelCostPln(
-    ROUTE_CONSTANTS.consolidatedRouteKm,
-    EMISSIONS.bigTruckLitersPer100km
-  );
-
-  // Cargo value
-  const kapustaPrice = WHOLESALE_PRICES.find((p) => p.crop === "Kapusta biała")!;
-  const cargoValuePln = totalPallets * kapustaPrice.palletWeightKg * kapustaPrice.pricePlnPerKg;
-
-  // Milk run route: sort farmers by longitude (west→east pickup order), end at hub
+  // Real distances via OSRM
+  const hub = { lat: VIRTUAL_HUB.lat, lng: VIRTUAL_HUB.lng };
   const routeOrder = [...FARMERS].sort((a, b) => a.lng - b.lng);
+
+  // Individual: each farmer drives to hub and back (round trip)
+  const individualDistances = await Promise.all(
+    FARMERS.map(f => osrmDistanceKm([{ lat: f.lat, lng: f.lng }, hub]).then(d => d * 2))
+  );
+
+  // Consolidated: one truck picks up all farmers in order, ends at hub
+  const milkRunDistanceKm = await osrmDistanceKm([
+    ...routeOrder.map(f => ({ lat: f.lat, lng: f.lng })),
+    hub,
+  ]);
+
+  // CO2 and cost calculations using real distances
+  const co2Individual = individualDistances.reduce((sum, d) =>
+    sum + calcCo2Kg(d, EMISSIONS.smallVanLitersPer100km), 0);
+  const costIndividual = individualDistances.reduce((sum, d) =>
+    sum + calcFuelCostPln(d, EMISSIONS.smallVanLitersPer100km), 0);
+
+  const co2Consolidated = calcCo2Kg(milkRunDistanceKm, EMISSIONS.bigTruckLitersPer100km);
+  const costConsolidated = calcFuelCostPln(milkRunDistanceKm, EMISSIONS.bigTruckLitersPer100km);
+
+  // Cargo value from live EC prices
+  const cargoValuePln = FARMERS.reduce((sum, f) => {
+    const priceData = pricesRes?.prices[f.crop];
+    const plnPerPallet = priceData?.plnPerPallet ?? 500;
+    return sum + f.pallets * plnPerPallet;
+  }, 0);
+
   const milkRunRoute = [
     ...routeOrder.map((f) => ({ lat: f.lat, lng: f.lng, name: f.name })),
     { lat: VIRTUAL_HUB.lat, lng: VIRTUAL_HUB.lng, name: VIRTUAL_HUB.name },
@@ -90,6 +108,8 @@ export async function GET() {
       costConsolidatedPln: Math.round(costConsolidated * 100) / 100,
       costSavedPln: Math.round((costIndividual - costConsolidated) * 100) / 100,
       cargoValuePln: Math.round(cargoValuePln),
+      milkRunDistanceKm: Math.round(milkRunDistanceKm),
+      priceSource: pricesRes ? "ec-agridata" : "fallback",
     },
     milkRunRoute,
   };

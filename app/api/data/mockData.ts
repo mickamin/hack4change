@@ -91,13 +91,12 @@ export const WHOLESALE_PRICES: WholesalePrice[] = [
   },
 ];
 
-// Virtual Hub: farmer with best road access (closest to DK20 national road, Kartuzy)
+// Renk — Pomorskie Centrum Hurtowe Gdańsk (real wholesale hub for the region)
 export const VIRTUAL_HUB = {
-  farmerId: "f1",
-  name: "Jan Kaszubski (Hub)",
-  lat: 54.3284,
-  lng: 18.1543,
-  description: "Węzeł DK20 Kartuzy – najlepszy dostęp drogowy",
+  name: "Renk Gdańsk",
+  lat: 54.3441,
+  lng: 18.6475,
+  description: "Pomorskie Centrum Hurtowe — główny rynek hurtowy Trójmiasta",
 };
 
 // Route simulation constants

@@ -456,12 +456,17 @@ export default function App() {
       {/* Metrics */}
       {animStep >= 2 && metrics && (
         <div style={{ padding: "0.875rem 1.25rem", borderBottom: `1px solid ${T.border}` }}>
-          <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.625rem" }}>
-            Wspólna dostawa vs. samodzielnie
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.625rem" }}>
+            <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              Wspólna dostawa vs. samodzielnie
+            </div>
+            <span style={{ fontSize: "0.58rem", fontWeight: 700, color: metrics.priceSource === "ec-agridata" ? T.accent : T.subtle, background: metrics.priceSource === "ec-agridata" ? "#e8f5e0" : T.surface, border: `1px solid ${metrics.priceSource === "ec-agridata" ? T.accent + "44" : T.border}`, borderRadius: "4px", padding: "1px 5px" }}>
+              {metrics.priceSource === "ec-agridata" ? "EC live" : "szacunek"}
+            </span>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "0.5rem" }}>
-            <StatBox label="Oszczędność" value={`${metrics.costSavedPln.toFixed(0)} zł`} sub="na transporcie" accent />
-            <StatBox label="CO₂ mniej" value={`${metrics.co2SavedKg} kg`} sub={`${allFarmers.length + 1} vanów → 1 TIR`} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "0.625rem" }}>
+            <StatBox label="Oszczędność" value={`${metrics.costSavedPln.toFixed(0)} zł`} sub={`trasa ${metrics.milkRunDistanceKm} km`} accent />
+            <StatBox label="CO₂ mniej" value={`${metrics.co2SavedKg} kg`} sub={`${allFarmers.length} vanów → 1 TIR`} />
           </div>
           <div style={{ fontSize: "0.7rem", color: T.muted, textAlign: "center" }}>
             Wartość ładunku: <strong style={{ color: T.text }}>{metrics.cargoValuePln.toLocaleString("pl-PL")} zł</strong>
