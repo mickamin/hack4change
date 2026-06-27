@@ -61,7 +61,7 @@ const COMMUNES = TERYT_COMMUNES.filter((c) => c.powiat !== "Gdańsk");
 export default function PrzewoznikPage() {
   const { isOnline } = useOfflineSync();
   const [hydrated, setHydrated] = useState(false);
-  const [act, setAct] = useState<Act>(1);
+  const [act, setAct] = useState<Act>(2);
 
   const [carrierName, setCarrierName] = useState("");
   const [fromCommune, setFromCommune] = useState<TerytCommune>(
@@ -161,7 +161,7 @@ export default function PrzewoznikPage() {
     return (
       <div style={{ minHeight: "100dvh", background: T.bg, display: "flex", flexDirection: "column", color: T.text }}>
         <div style={{ background: T.card, borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: "1rem", padding: "1rem 1.25rem" }}>
-          <button onClick={() => setAct(1)} style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1 }}>←</button>
+          <a href="/" style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: "1.5rem", padding: 0, lineHeight: 1, textDecoration: "none" }}>←</a>
           <div>
             <div style={{ fontWeight: 900, fontSize: "1rem", color: T.accentHi }}>Zgłoś pusty kurs</div>
             <div style={{ fontSize: "0.7rem", color: T.subtle }}>Trasa, termin i wolna załadowność</div>
