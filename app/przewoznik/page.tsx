@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
-import { haversineKm, type EmptyRunResult, type GeoPoint } from "@/utils/emptyRuns";
+import { haversineKm, type EmptyRunResult, type GeoPoint, type DistributorMatch } from "@/utils/emptyRuns";
 
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
 
@@ -175,6 +175,7 @@ export default function PrzewoznikPage() {
       const raw = (await res.json()) as Partial<EmptyRunResult>;
       setResult({
         matches: Array.isArray(raw.matches) ? raw.matches : [],
+        distributorMatches: Array.isArray(raw.distributorMatches) ? raw.distributorMatches : [],
         takenPallets: raw.takenPallets ?? 0,
         capacityPallets: raw.capacityPallets ?? capacity,
         fillPct: raw.fillPct ?? 0,
@@ -187,6 +188,7 @@ export default function PrzewoznikPage() {
     } catch {
       setResult({
         matches: [],
+        distributorMatches: [],
         takenPallets: 0,
         capacityPallets: capacity,
         fillPct: 0,
@@ -448,6 +450,29 @@ export default function PrzewoznikPage() {
               </div>
             </div>
           </>
+        )}
+
+        {/* Dystrybutorzy szukajacy towaru */}
+        {r.distributorMatches.length > 0 && (
+          <div style={{ marginTop: "1.25rem" }}>
+            <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.gold, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
+              Dystrybutorzy szukajacy towaru ({r.distributorMatches.length})
+            </div>
+            {r.distributorMatches.map((dm) => (
+              <div key={dm.distributor.id} style={{ display: "flex", alignItems: "center", padding: "0.6rem 0", borderBottom: `1px solid ${T.border}`, gap: "0.7rem" }}>
+                <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: "#fdf4e6", border: `1.5px solid ${T.gold}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "0.7rem", fontWeight: 800, color: T.gold }}>D</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.9rem", color: T.text }}>{dm.distributor.name}</div>
+                  <div style={{ fontSize: "0.72rem", color: T.subtle }}>
+                    Potrzebuje: {dm.distributor.qty} {dm.distributor.unit === "palety" ? "pal." : "kg"} {dm.distributor.crop.toLowerCase()}
+                  </div>
+                  <div style={{ fontSize: "0.68rem", color: T.muted }}>
+                    Odbiór: {dm.distributor.location} · +{dm.detourKm} km od trasy
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
 
         {/* Booking */}

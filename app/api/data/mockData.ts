@@ -304,6 +304,29 @@ export const CROP_AVAILABILITY: CropAvailability[] = [
   },
 ];
 
+// ---------------------------------------------------------------------------
+// Distributor demands — mock of zapotrzebowania dystrybutorów
+// ---------------------------------------------------------------------------
+export interface DistributorDemandEntry {
+  id: string;
+  name: string;
+  crop: string;
+  qty: number;
+  unit: "palety" | "kg";
+  lat: number;
+  lng: number;
+  location: string;
+}
+
+export const DISTRIBUTOR_DEMANDS: DistributorDemandEntry[] = [
+  { id: "d1", name: "Hurtownia Kaszuby", crop: "Kapusta biala", qty: 15, unit: "palety", lat: 54.3356, lng: 18.2014, location: "Kartuzy" },
+  { id: "d2", name: "FreshMarket Gdansk", crop: "Marchew", qty: 2000, unit: "kg", lat: 54.3520, lng: 18.6466, location: "Gdansk" },
+  { id: "d3", name: "Bio-Sklep Trojmiasto", crop: "Ziemniaki", qty: 8, unit: "palety", lat: 54.4033, lng: 18.5700, location: "Gdynia" },
+  { id: "d4", name: "Warzywniak Bytow", crop: "Cebula", qty: 500, unit: "kg", lat: 54.1730, lng: 17.4900, location: "Bytow" },
+  { id: "d5", name: "Gastro-Hurt Starogard", crop: "Kapusta biala", qty: 10, unit: "palety", lat: 53.9700, lng: 18.5300, location: "Starogard Gd." },
+  { id: "d6", name: "Sklep Ekologiczny", crop: "Jablka", qty: 1200, unit: "kg", lat: 54.3600, lng: 18.1800, location: "Zukowo" },
+];
+
 // Bronisze prices extended to cover all crops
 export const WHOLESALE_PRICES_EXTENDED: Record<CropKey, { pricePlnPerKg: number; palletWeightKg: number }> = {
   "Kapusta biała":   { pricePlnPerKg: 0.85, palletWeightKg: 600 },

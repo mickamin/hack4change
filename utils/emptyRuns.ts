@@ -11,8 +11,10 @@ import {
   EMISSIONS,
   ROUTE_CONSTANTS,
   WHOLESALE_PRICES_EXTENDED,
+  DISTRIBUTOR_DEMANDS,
   type Farmer,
   type CropKey,
+  type DistributorDemandEntry,
 } from "@/app/api/data/mockData";
 
 export interface GeoPoint {
@@ -35,12 +37,18 @@ export interface PickupMatch {
   detourKm: number; // odległość punktu odbioru od korytarza trasy
 }
 
+export interface DistributorMatch {
+  distributor: DistributorDemandEntry;
+  detourKm: number;
+}
+
 export interface EmptyRunResult {
   matches: PickupMatch[];
+  distributorMatches: DistributorMatch[];
   takenPallets: number;
   capacityPallets: number;
   fillPct: number;
-  co2SavedKg: number; // vs. samodzielne dojazdy rolników
+  co2SavedKg: number;
   cargoValuePln: number;
   date: string;
   toLabel: string;
@@ -127,8 +135,15 @@ export function matchEmptyRun(input: EmptyRunInput, farmers: readonly Farmer[] =
   );
   const cargoValuePln = matches.reduce((sum, m) => sum + cargoValueForFarmer(m.farmer), 0);
 
+  const distributorMatches = DISTRIBUTOR_DEMANDS
+    .map((d) => ({ distributor: d, detourKm: distanceToRouteKm(d, input.from, input.to) }))
+    .filter((c) => c.detourKm <= maxDetour)
+    .sort((a, b) => a.detourKm - b.detourKm)
+    .map((c) => ({ distributor: c.distributor, detourKm: Math.round(c.detourKm * 10) / 10 }));
+
   return {
     matches,
+    distributorMatches,
     takenPallets,
     capacityPallets: input.capacityPallets,
     fillPct: input.capacityPallets > 0 ? Math.min(100, Math.round((takenPallets / input.capacityPallets) * 100)) : 0,
