@@ -15,6 +15,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 export interface FarmerRequestRow {
   farmer_name: string;
   phone: string;
+  address: string;
   teryt: number;
   crop_type: string;
   pallet_count: number;

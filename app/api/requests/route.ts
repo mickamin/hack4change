@@ -22,6 +22,7 @@ export async function POST(request: Request) {
   const row: FarmerRequestRow = {
     farmer_name: farmer.name || communeName || "Rolnik (anonim)",
     phone:        farmer.phone ?? "",
+    address:      farmer.village ?? communeName ?? "",
     teryt:        terytCode,
     crop_type:    farmer.crop,
     pallet_count: farmer.pallets,
