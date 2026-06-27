@@ -32,6 +32,7 @@ export interface OptimizeRouteResponse {
     priceSource: "ec-agridata" | "fallback";
     co2Source: string;
   };
+  pricesMap: Record<string, number>; // plnPerPallet per crop
   milkRunRoute: Array<{ lat: number; lng: number; name: string }>;
 }
 
@@ -118,6 +119,23 @@ export async function GET() {
     { lat: VIRTUAL_HUB.lat, lng: VIRTUAL_HUB.lng, name: VIRTUAL_HUB.name },
   ];
 
+  // Build pricesMap: plnPerPallet per crop name
+  const pricesMap: Record<string, number> = {};
+  if (pricesRes) {
+    for (const [crop, data] of Object.entries(pricesRes.prices)) {
+      pricesMap[crop] = data.plnPerPallet;
+    }
+  } else {
+    // Fallback prices (PLN/pallet)
+    pricesMap["Kapusta biała"]   = 510;
+    pricesMap["Kapusta kiszona"] = 600;
+    pricesMap["Ziemniaki"]       = 455;
+    pricesMap["Marchew"]         = 488;
+    pricesMap["Buraki ćwikłowe"] = 374;
+    pricesMap["Cebula"]          = 660;
+    pricesMap["Jabłka"]          = 560;
+  }
+
   const response: OptimizeRouteResponse = {
     farmers: FARMERS,
     hub: VIRTUAL_HUB,
@@ -134,6 +152,7 @@ export async function GET() {
       priceSource: pricesRes ? "ec-agridata" : "fallback",
       co2Source: process.env.ORS_API_KEY ? "DEFRA-2024+ORS-HGV" : "DEFRA-2024+OSRM",
     },
+    pricesMap,
     milkRunRoute,
   };
 

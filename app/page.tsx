@@ -161,10 +161,22 @@ export default function App() {
   const visibleFarmers = allFarmers.slice(0, countedFarmers);
   const hub = routeData?.hub;
   const metrics = routeData?.metrics;
+  const pricesMap = routeData?.pricesMap ?? {};
 
   const userTotalPallets = cropEntries.length > 0
     ? cropEntries.reduce((s, e) => s + e.pallets, 0)
     : (userFarmer?.pallets ?? 0);
+
+  // Personal metrics for this farmer
+  const userEarningsPln = cropEntries.length > 0
+    ? cropEntries.reduce((s, e) => s + e.pallets * (pricesMap[e.crop] ?? 500), 0)
+    : userFarmer ? (userFarmer.pallets * (pricesMap[userFarmer.crop] ?? 500)) : 0;
+  const userSavingsPln = metrics && metrics.totalPallets > 0
+    ? Math.round(metrics.costSavedPln * (userTotalPallets / metrics.totalPallets))
+    : 0;
+  const userCo2SavedKg = metrics && metrics.totalPallets > 0
+    ? Math.round(metrics.co2SavedKg * (userTotalPallets / metrics.totalPallets) * 10) / 10
+    : 0;
   const poolPallets = visibleFarmers.reduce((s, f) => s + f.pallets, 0) + userTotalPallets;
   const poolPct = Math.min(100, Math.round((poolPallets / TRUCK_CAPACITY) * 100));
 
@@ -479,13 +491,13 @@ export default function App() {
       {visibleFarmers.map(f => <FarmerRow key={f.id} name={f.name} crop={f.crop} pallets={f.pallets} isCreator={!!f.isPoolCreator} />)}
       {animStep >= 2 && metrics && (
         <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: `1px solid ${T.border}` }}>
-          <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Wspólna dostawa vs. samodzielnie</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "0.5rem" }}>
-            <StatBox label="Oszczędność" value={`${metrics.costSavedPln.toFixed(0)} zł`} sub={`trasa ${metrics.milkRunDistanceKm} km`} accent />
-            <StatBox label="CO₂ mniej" value={`${metrics.co2SavedKg} kg`} sub={`${allFarmers.length} vanów → 1 TIR`} />
+          <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
+            Twój rachunek · ceny EC Renk {metrics.priceSource === "ec-agridata" ? <span style={{ color: T.accent }}>live</span> : "szacunek"}
           </div>
-          <div style={{ fontSize: "0.7rem", color: T.muted, textAlign: "center" }}>
-            Wartość ładunku: <strong style={{ color: T.text }}>{metrics.cargoValuePln.toLocaleString("pl-PL")} zł</strong>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
+            <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena Renk" accent />
+            <StatBox label="Oszczędzasz" value={`${userSavingsPln} zł`} sub="vs. własny transport" />
+            <StatBox label="CO₂ mniej" value={`${userCo2SavedKg} kg`} sub="Twój udział" />
           </div>
         </div>
       )}
@@ -513,9 +525,13 @@ export default function App() {
         : userFarmer && <FarmerRow name={userFarmer.name} crop={userFarmer.crop} pallets={userFarmer.pallets} isUser />
       }
       {pool2Farmers.map(f => <FarmerRow key={f.id} name={f.name} crop={f.crop} pallets={f.pallets} isCreator={f.isCreator} />)}
-      <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: `1px solid ${T.border}`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
-        <StatBox label="Oszczędność" value="~210 zł" sub="trasa ~72 km" accent />
-        <StatBox label="CO₂ mniej" value="~21 kg" sub={`${pool2Farmers.length} vanów → 1 TIR`} />
+      <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: `1px solid ${T.border}` }}>
+        <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Twój rachunek</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
+          <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena Renk" accent />
+          <StatBox label="Oszczędzasz" value={`~${Math.round(userSavingsPln * 0.85)} zł`} sub="vs. własny transport" />
+          <StatBox label="CO₂ mniej" value={`~${Math.round(userCo2SavedKg * 0.85)} kg`} sub="Twój udział" />
+        </div>
       </div>
     </>
   );
@@ -536,10 +552,18 @@ export default function App() {
         <StatBox label="Odjazd" value={nextWednesday()} />
         <StatBox label="Typ" value="Backhaul TIR" />
       </div>
-      <div style={{ padding: "0.75rem", background: "#f0faeb", border: "1px solid #b0d88a", borderRadius: "0.875rem", fontSize: "0.8rem", color: T.accent, fontWeight: 700 }}>
+      <div style={{ padding: "0.75rem", background: "#f0faeb", border: "1px solid #b0d88a", borderRadius: "0.875rem", fontSize: "0.8rem", color: T.accent, fontWeight: 700, marginBottom: "0.75rem" }}>
         🔄 Pusty przebieg → TIR wraca z Gdańska i zabierze Twój towar po drodze.
       </div>
       <CapacityBar current={6} max={18} color={T.gold} />
+      <div style={{ marginTop: "0.75rem" }}>
+        <div style={{ fontSize: "0.65rem", fontWeight: 700, color: T.subtle, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Twój rachunek</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
+          <StatBox label="Zarobisz" value={`${userEarningsPln.toLocaleString("pl-PL")} zł`} sub="cena Renk" accent />
+          <StatBox label="Oszczędzasz" value={`~${Math.round(userSavingsPln * 0.9)} zł`} sub="backhaul rabat" />
+          <StatBox label="CO₂ mniej" value={`~${Math.round(userCo2SavedKg * 1.2)} kg`} sub="backhaul bonus" />
+        </div>
+      </div>
     </>
   );
 
